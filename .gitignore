@@ -1,0 +1,9 @@
+bin/Debug/
+
+obj/Debug/src/
+
+*.swp
+
+*.depend
+
+*.layout
