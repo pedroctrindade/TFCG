@@ -2,8 +2,8 @@
 
 // Atributos de fragmentos recebidos como entrada ("in") pelo Fragment Shader.
 // Neste exemplo, este atributo foi gerado pelo rasterizador como a
-// interpolação da cor de cada vértice, definidas em "shader_vertex.glsl" e
-// "main.cpp".
+// interpolação da posição global e a normal de cada vértice, definidas em
+// "shader_vertex.glsl" e "main.cpp".
 in vec4 position_world;
 in vec4 normal;
 
@@ -19,10 +19,9 @@ uniform mat4 view;
 uniform mat4 projection;
 
 // Identificador que define qual objeto está sendo desenhado no momento
-#define SPHERE 0
-#define BUNNY  1
-#define PLANE  2
-#define FISH   3
+#define PLANE 0
+#define COW  1
+#define FISH  2
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -69,7 +68,7 @@ void main()
     float U = 0.0;
     float V = 0.0;
 
-    if ( object_id == SPHERE )
+    if ( object_id == FISH )
     {
         // PREENCHA AQUI as coordenadas de textura da esfera, computadas com
         // projeção esférica EM COORDENADAS DO MODELO. Utilize como referência
@@ -95,9 +94,8 @@ void main()
         U = (theta + M_PI)/(2*M_PI);
         V = (phi + (M_PI/2))/M_PI;
     }
-    else if ( object_id == BUNNY )
+    else if ( object_id == COW )
     {
-
         // PREENCHA AQUI as coordenadas de textura do coelho, computadas com
         // projeção planar XY em COORDENADAS DO MODELO. Utilize como referência
         // o slide 106 do documento "Aula_20_e_21_Mapeamento_de_Texturas.pdf",
@@ -118,7 +116,7 @@ void main()
         U = (position_model.x - minx)/(maxx - minx);
         V = (position_model.y - miny)/(maxy - miny);
     }
-    else if ( object_id == PLANE  || object_id == FISH )
+    else if (  object_id == PLANE)
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
         U = texcoords.x;
@@ -130,7 +128,7 @@ void main()
 
     // Equação de Iluminação
     float lambert = max(0,dot(n,l));
-    if(lambert == 0 && object_id == SPHERE) Kd0 = texture(TextureImage1, vec2(U,V)).rgb;
+    if(lambert == 0 && object_id == COW) Kd0 = texture(TextureImage1, vec2(U,V)).rgb;
 
     color = Kd0 * (lambert + 0.01);
 

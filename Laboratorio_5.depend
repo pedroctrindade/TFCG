@@ -24,28 +24,33 @@
 	<inttypes.h>
 	<stdint.h>
 
-1543422284 source:c:\users\pedro\desktop\trabalho_final_fcg\src\main.cpp
-	<cmath>
-	<cstdio>
-	<cstdlib>
-	<map>
-	<stack>
+1541503284 source:c:\users\pedro\desktop\trabalho_final_fcg\src\stb_image.cpp
+	"stb_image.h"
+
+1541503284 c:\users\pedro\desktop\trabalho_final_fcg\include\stb_image.h
+	"stb_image.h"
+	<stdio.h>
+	<stdarg.h>
+	<stddef.h>
+	<stdlib.h>
+	<string.h>
+	<limits.h>
+	<math.h>
+	<stdio.h>
+	<assert.h>
+	<stdint.h>
+	<emmintrin.h>
+	<intrin.h>
+	<arm_neon.h>
+
+1541503284 source:c:\users\pedro\desktop\trabalho_final_fcg\src\textrendering.cpp
 	<string>
-	<vector>
-	<limits>
-	<fstream>
-	<sstream>
-	<stdexcept>
-	<algorithm>
 	<glad/glad.h>
 	<GLFW/glfw3.h>
 	<glm/mat4x4.hpp>
 	<glm/vec4.hpp>
-	<glm/gtc/type_ptr.hpp>
-	<tiny_obj_loader.h>
-	<stb_image.h>
 	"utils.h"
-	"matrices.h"
+	"dejavufont.h"
 
 1541503284 c:\users\pedro\desktop\trabalho_final_fcg\include\glfw\glfw3.h
 	<stddef.h>
@@ -408,6 +413,53 @@
 
 1541503284 c:\users\pedro\desktop\trabalho_final_fcg\include\glm\detail\type_mat4x4_simd.inl
 
+1541503284 c:\users\pedro\desktop\trabalho_final_fcg\include\utils.h
+	<cstdio>
+
+1541503284 c:\users\pedro\desktop\trabalho_final_fcg\include\dejavufont.h
+	<stddef.h>
+	<stdint.h>
+
+1541503284 source:c:\users\pedro\desktop\trabalho_final_fcg\src\tiny_obj_loader.cpp
+	"tiny_obj_loader.h"
+
+1541503284 c:\users\pedro\desktop\trabalho_final_fcg\include\tiny_obj_loader.h
+	<map>
+	<string>
+	<vector>
+	<cassert>
+	<cctype>
+	<cmath>
+	<cstddef>
+	<cstdlib>
+	<cstring>
+	<utility>
+	<fstream>
+	<sstream>
+
+1543454242 source:c:\users\pedro\desktop\trabalho_final_fcg\src\main.cpp
+	<cmath>
+	<cstdio>
+	<cstdlib>
+	<map>
+	<stack>
+	<string>
+	<vector>
+	<limits>
+	<fstream>
+	<sstream>
+	<stdexcept>
+	<algorithm>
+	<glad/glad.h>
+	<GLFW/glfw3.h>
+	<glm/mat4x4.hpp>
+	<glm/vec4.hpp>
+	<glm/gtc/type_ptr.hpp>
+	<tiny_obj_loader.h>
+	<stb_image.h>
+	"utils.h"
+	"matrices.h"
+
 1541503284 c:\users\pedro\desktop\trabalho_final_fcg\include\glm\gtc\type_ptr.hpp
 	"../gtc/quaternion.hpp"
 	"../vec2.hpp"
@@ -471,39 +523,6 @@
 1541503284 c:\users\pedro\desktop\trabalho_final_fcg\include\glm\gtc\type_ptr.inl
 	<cstring>
 
-1541503284 c:\users\pedro\desktop\trabalho_final_fcg\include\tiny_obj_loader.h
-	<map>
-	<string>
-	<vector>
-	<cassert>
-	<cctype>
-	<cmath>
-	<cstddef>
-	<cstdlib>
-	<cstring>
-	<utility>
-	<fstream>
-	<sstream>
-
-1541503284 c:\users\pedro\desktop\trabalho_final_fcg\include\stb_image.h
-	"stb_image.h"
-	<stdio.h>
-	<stdarg.h>
-	<stddef.h>
-	<stdlib.h>
-	<string.h>
-	<limits.h>
-	<math.h>
-	<stdio.h>
-	<assert.h>
-	<stdint.h>
-	<emmintrin.h>
-	<intrin.h>
-	<arm_neon.h>
-
-1541503284 c:\users\pedro\desktop\trabalho_final_fcg\include\utils.h
-	<cstdio>
-
 1541503284 c:\users\pedro\desktop\trabalho_final_fcg\include\matrices.h
 	<cstdio>
 	<cstdlib>
@@ -526,23 +545,4 @@
 
 1541503284 c:\users\pedro\desktop\trabalho_final_fcg\include\glm\matrix.hpp
 	"detail/func_matrix.hpp"
-
-1541503284 source:c:\users\pedro\desktop\trabalho_final_fcg\src\stb_image.cpp
-	"stb_image.h"
-
-1541503284 source:c:\users\pedro\desktop\trabalho_final_fcg\src\textrendering.cpp
-	<string>
-	<glad/glad.h>
-	<GLFW/glfw3.h>
-	<glm/mat4x4.hpp>
-	<glm/vec4.hpp>
-	"utils.h"
-	"dejavufont.h"
-
-1541503284 c:\users\pedro\desktop\trabalho_final_fcg\include\dejavufont.h
-	<stddef.h>
-	<stdint.h>
-
-1541503284 source:c:\users\pedro\desktop\trabalho_final_fcg\src\tiny_obj_loader.cpp
-	"tiny_obj_loader.h"
 
