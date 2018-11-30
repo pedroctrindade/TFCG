@@ -144,6 +144,8 @@ std::map<std::string, SceneObject> g_VirtualScene;
 // Pilha que guardará as matrizes de modelagem.
 std::stack<glm::mat4>  g_MatrixStack;
 
+#define FISHBOUNDX 2
+
 // Razão de proporção da janela (largura/altura). Veja função FramebufferSizeCallback().
 float g_ScreenRatio = 1.0f;
 
@@ -163,8 +165,8 @@ bool g_MiddleMouseButtonPressed = false; // Análogo para botão do meio do mous
 // efetiva da câmera é calculada dentro da função main(), dentro do loop de
 // renderização.
 float g_CameraTheta = 0.0f; // Ângulo no plano ZX em relação ao eixo Z
-float g_CameraPhi = 0.0f;   // Ângulo em relação ao eixo Y
-float g_CameraDistance = 3.5f; // Distância da câmera para a origem
+float g_CameraPhi = 0.375f;   // Ângulo em relação ao eixo Y
+float g_CameraDistance = 7.5f; // Distância da câmera para a origem
 
 // Variáveis que controlam rotação do antebraço
 float g_ForearmAngleZ = 0.0f;
@@ -174,12 +176,19 @@ float g_ForearmAngleX = 0.0f;
 float g_TorsoPositionX = 0.0f;
 float g_TorsoPositionY = 0.0f;
 
+// Variáveis que controlam a posição do peixe;
+float fishPositionX = 0.0f;
+float fishPositionY = 0.0f;
+float fishPositionZ = 0.0f;
 // Variável que controla o tipo de projeção utilizada: perspectiva ou ortográfica.
 bool g_UsePerspectiveProjection = true;
 
 // Variável que controla se o texto informativo será mostrado na tela.
 bool g_ShowInfoText = true;
 
+bool keyPressedX = false;
+
+bool keyPressedY = false;
 // Variáveis que definem um programa de GPU (shaders). Veja função LoadShadersFromFiles().
 GLuint vertex_shader_id;
 GLuint fragment_shader_id;
@@ -223,7 +232,7 @@ int main(int argc, char* argv[])
     // Criamos uma janela do sistema operacional, com 800 colunas e 600 linhas
     // de pixels, e com título "INF01047 ...".
     GLFWwindow* window;
-    window = glfwCreateWindow(800, 600, "INF01047 - Seu Cartao - Seu Nome", NULL, NULL);
+    window = glfwCreateWindow(800, 600, "INF01047 Little ChickFish - Dieniffer e Pedro ", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -269,7 +278,8 @@ int main(int argc, char* argv[])
 
     // Carregamos duas imagens para serem utilizadas como textura
     LoadTextureImage("../../data/fish.jpg");      // TextureImage0
-    LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif"); // TextureImage1
+    LoadTextureImage("../../data/fundo.jpg"); // TextureImage1
+    LoadTextureImage("../../data/areia.jpg"); // TextureImage2
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel planemodel("../../data/plane.obj");
@@ -279,6 +289,10 @@ int main(int argc, char* argv[])
     ObjModel cowmodel("../../data/cow.obj");
     ComputeNormals(&cowmodel);
     BuildTrianglesAndAddToVirtualScene(&cowmodel);
+
+    ObjModel spheremodel("../../data/sphere.obj");
+    ComputeNormals(&spheremodel);
+    BuildTrianglesAndAddToVirtualScene(&spheremodel);
 
     ObjModel fishmodel("../../data/fish.obj");
     ComputeNormals(&fishmodel);
@@ -318,7 +332,7 @@ int main(int argc, char* argv[])
         // Conversaremos sobre sistemas de cores nas aulas de Modelos de Iluminação.
         //
         //           R     G     B     A
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClearColor(0.01f, 0.42f, 0.76f, 1.0f);
 
         // "Pintamos" todos os pixels do framebuffer com a cor definida acima,
         // e também resetamos todos os pixels do Z-buffer (depth buffer).
@@ -354,7 +368,7 @@ int main(int argc, char* argv[])
         // Note que, no sistema de coordenadas da câmera, os planos near e far
         // estão no sentido negativo! Veja slides 190-193 do documento "Aula_09_Projecoes.pdf".
         float nearplane = -0.1f;  // Posição do "near plane"
-        float farplane  = -10.0f; // Posição do "far plane"
+        float farplane  = -50.0f; // Posição do "far plane"
 
         if (g_UsePerspectiveProjection)
         {
@@ -389,16 +403,19 @@ int main(int argc, char* argv[])
         #define PLANE 0
         #define COW  1
         #define FISH  2
+        #define SPHERE 3
         #define M_PI   3.14159265358979323846
         #define M_PI_2 1.57079632679489661923
+
         // Desenhamos o modelo da esfera
-        /*model = Matrix_Translate(-1.0f,0.0f,0.0f)
+        model = Matrix_Translate(0.0f,0.0f,0.0f)
+              * Matrix_Scale(30.0f, -30.0f, 30.0f)
               * Matrix_Rotate_Z(0.6f)
               * Matrix_Rotate_X(0.2f)
               * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
         glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(object_id_uniform, SPHERE);
-        DrawVirtualObject("sphere");*/
+        DrawVirtualObject("sphere");
 
         // Desenhamos o modelo do coelho
         /*model = Matrix_Translate(1.0f,0.0f,0.0f)
@@ -408,13 +425,13 @@ int main(int argc, char* argv[])
         DrawVirtualObject("cow");*/
 
         // Desenhamos o plano do chão
-        model = Matrix_Translate(0.0f,0.0f,0.0f)
+        model = Matrix_Translate(fishPositionX,0.0f,fishPositionZ)
         * Matrix_Scale(0.075f, 0.05f, 0.05f) * Matrix_Rotate_X(M_PI_2 * 3) * Matrix_Rotate_Z(M_PI_2 * 3) ;
         glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(object_id_uniform, FISH);
         DrawVirtualObject("fish");
 
-        model = Matrix_Translate(0.0f,-1.1f,0.0f);
+        model = Matrix_Translate(0.0f,-1.1f,0.0f) * Matrix_Scale(30.0f,30.0f,30.0f);
         glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(object_id_uniform, PLANE);
         DrawVirtualObject("plane");
@@ -1070,8 +1087,8 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         g_CameraPhi   += 0.01f*dy;
 
         // Em coordenadas esféricas, o ângulo phi deve ficar entre -pi/2 e +pi/2.
-        float phimax = 3.141592f/2;
-        float phimin = -phimax;
+        float phimax = 3.141592f/8;
+        float phimin = 0;
 
         if (g_CameraPhi > phimax)
             g_CameraPhi = phimax;
@@ -1174,6 +1191,42 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     {
         g_AngleZ += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
     }
+    if ((key == GLFW_KEY_A && action == GLFW_REPEAT) || (key == GLFW_KEY_A && action == GLFW_PRESS))
+      {
+        fishPositionX -= 0.35;
+        if ( abs(fishPositionX) >= 2.0 )
+        {
+            fishPositionX = - FISHBOUNDX;
+        }
+      }
+    if ((key == GLFW_KEY_D && action == GLFW_REPEAT) || (key == GLFW_KEY_D && action == GLFW_PRESS))
+      {
+          fishPositionX += 0.35;
+        if ( fishPositionX >= FISHBOUNDX)
+        {
+            fishPositionX = FISHBOUNDX;
+        }
+      }
+    if ((key == GLFW_KEY_W && action == GLFW_REPEAT) || (key == GLFW_KEY_W && action == GLFW_PRESS))
+    {
+        fishPositionZ -= 0.35;
+        if ( abs(fishPositionZ) >= FISHBOUNDX)
+        {
+            fishPositionZ = -FISHBOUNDX;
+        }
+
+    }
+
+    if ((key == GLFW_KEY_S && action == GLFW_REPEAT) || (key == GLFW_KEY_S && action == GLFW_PRESS))
+    {
+        fishPositionZ += 0.35;
+        if ( abs(fishPositionZ) >= FISHBOUNDX)
+        {
+            fishPositionZ = FISHBOUNDX;
+        }
+
+    }
+
 
     // Se o usuário apertar a tecla espaço, resetamos os ângulos de Euler para zero.
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
@@ -1487,4 +1540,3 @@ void PrintObjModelInfo(ObjModel* model)
 
 // set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
 // vim: set spell spelllang=pt_br :
-
