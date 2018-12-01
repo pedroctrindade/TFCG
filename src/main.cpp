@@ -43,10 +43,11 @@
 #include <tiny_obj_loader.h>
 
 #include <stb_image.h>
-
+#include <time.h>
 // Headers locais, definidos na pasta "include/"
 #include "utils.h"
 #include "matrices.h"
+#include "GenericControl.h"
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -80,6 +81,7 @@ struct ObjModel
 void PushMatrix(glm::mat4 M);
 void PopMatrix(glm::mat4& M);
 
+void animateFangtooths();
 // Declaração de várias funções utilizadas em main().  Essas estão definidas
 // logo após a definição de main() neste arquivo.
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
@@ -120,6 +122,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
+void loadFangTooth();
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
 struct SceneObject
@@ -152,20 +155,23 @@ float g_AngleX = 0.0f;
 float g_AngleY = 0.0f;
 float g_AngleZ = 0.0f;
 
+float boundx = 2;
+
+
 bool adjusted = false;
 bool g_wPressed = false;
 bool g_sPressed = false;
 bool g_dPressed = false;
 bool g_aPressed = false;
 
-int fangtooth_num = 10;
-int fishfood_num = 50;
-int cow_num = 3;
+#define FANGTOOTH_NUM 10
+#define FISHFOOD_NUM 50
+#define COW_NUM 3
 
 // Define o tipo de câmera
 bool g_isFreeCamera = false;
 
-float movementDelta = 0.0025;
+float movementDelta = 0.01;
 
 // "g_LeftMouseButtonPressed = true" se o usuário está com o botão esquerdo do mouse
 // pressionado no momento atual. Veja função MouseButtonCallback().
@@ -189,8 +195,10 @@ float g_ForearmAngleX = 0.0f;
 float g_TorsoPositionX = 0.0f;
 float g_TorsoPositionY = 0.0f;
 
+GenericControl fangtooths [FANGTOOTH_NUM];
 
-float oceanSizeZ = 200.0f;
+
+float oceanSizeZ = 150.0f;
 // Variável que controla o tipo de projeção utilizada: perspectiva ou ortográfica.
 bool g_UsePerspectiveProjection = true;
 
@@ -202,7 +210,7 @@ bool keyPressedX = false;
 bool keyPressedY = false;
 
 
-float interval = oceanSizeZ / fangtooth_num;
+float interval = oceanSizeZ / FANGTOOTH_NUM;
 
 
 // Variáveis que definem um programa de GPU (shaders). Veja função LoadShadersFromFiles().
@@ -319,6 +327,8 @@ int main(int argc, char* argv[])
     ComputeNormals(&fangtoothmodel);
     BuildTrianglesAndAddToVirtualScene(&fangtoothmodel);
 
+    loadFangTooth();
+
     if ( argc > 1 )
     {
         ObjModel model(argv[1]);
@@ -393,14 +403,14 @@ int main(int argc, char* argv[])
         //}
         if (g_wPressed) {
             camera_position_c.z +=  movementDelta * free_camera.z;
-            camera_position_c.y +=  movementDelta * free_camera.y;
+            //camera_position_c.y +=  movementDelta * free_camera.y;
             camera_position_c.x +=  movementDelta * free_camera.x;
             adjusted = true;
         }
 
         if (g_sPressed) {
             camera_position_c.z -=  movementDelta * free_camera.z;
-            camera_position_c.y -=  movementDelta * free_camera.y;
+            //camera_position_c.y -=  movementDelta * free_camera.y;
             camera_position_c.x -=  movementDelta * free_camera.x;
             adjusted = true;
         }
@@ -431,6 +441,11 @@ int main(int argc, char* argv[])
         if (camera_position_c.x < -2 )
         {
             camera_position_c.x = -2;
+        }
+
+        if (camera_position_c.z > oceanSizeZ - 15)
+        {
+            camera_position_c.z = oceanSizeZ -15;
         }
 
         camera_view_vector = free_camera;
@@ -489,7 +504,7 @@ int main(int argc, char* argv[])
 
         // Desenhamos o modelo da esfera
         model = Matrix_Translate(0.0f,0.0f,0.0f)
-              * Matrix_Scale(30.0f, -30.0f, 150.0f)
+              * Matrix_Scale(15.0f, -15.0f, oceanSizeZ)
               * Matrix_Rotate_Z(0.6f)
               * Matrix_Rotate_X(0.2f)
               * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
@@ -497,8 +512,9 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, SPHERE);
         DrawVirtualObject("sphere");
 
+        animateFangtooths();
 
-        model =  Matrix_Translate(camera_position_c.x, camera_position_c.y - 0.5, camera_position_c.z - 2) *
+        model =  Matrix_Translate(camera_position_c.x, camera_position_c.y - 1.5, camera_position_c.z - 2) *
          Matrix_Scale(0.075f, 0.05f, 0.05f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2);
          if (g_aPressed)
          {
@@ -508,6 +524,8 @@ int main(int argc, char* argv[])
          {
              model *= Matrix_Rotate_X(  - M_PI_2 / 8) * Matrix_Rotate_Z( - M_PI_2 / 16);
          }
+
+
         //model += Matrix_Translate(camera_position_c.x, camera_position_c.y, camera_position_c.z);
         //        Matrix_Rotate_Y(- M_PI) * Matrix_Rotate_Z(M_PI);
         glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
@@ -515,7 +533,7 @@ int main(int argc, char* argv[])
         DrawVirtualObject("fish");
 
          // Desenhamos o plano do chão
-        model = Matrix_Translate(0.0f,-1.1f,0.0f) * Matrix_Scale(30.0f,3.0f,300.0f);
+        model = Matrix_Translate(0.0f,-1.1f,0.0f) * Matrix_Scale(15.0f,3.0f,oceanSizeZ);
         glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(object_id_uniform, PLANE);
         DrawVirtualObject("plane");
@@ -559,24 +577,115 @@ int main(int argc, char* argv[])
     return 0;
 }
 
+void loadFishFood() {
+    interval = oceanSizeZ / FISHFOOD_NUM;
+    int i;
+
+    srand (time(NULL));
+
+    int random_n = rand() % 40 + 1;
+   // for (i = 0; i < FISHFOOD_NUM; i++)
+    //{
+    /*        GenericControl food;
+            food.obj_name = "Sphere";
+            food.obj_id = SPHERE;
+            fang.pos_x = boundx;
+            fang.pos_y = -1;
+            fang.pos_z = - (interval) * ( i + 1);
+            fang.direction = 4;
+            fangtooths[i] = fang;
+
+
+    }*/
+
+}
+
+void loadFangTooth(){
+
+    int i;
+
+    for (i = 0; i < FANGTOOTH_NUM; i++)
+    {
+        if ( (i % 2) == 0) {
+            GenericControl fang;
+            fang.obj_name = "fangtooth";
+            fang.obj_id = FANGTOOTH;
+            fang.pos_x = boundx;
+            fang.pos_y = -1;
+            fang.pos_z = - (interval) * ( i + 1);
+            fang.direction = 4;
+            fangtooths[i] = fang;
+
+
+        } else {
+            GenericControl fang;
+            fang.obj_name = "fangtooth";
+            fang.obj_id = FANGTOOTH;
+            fang.pos_x = - boundx;
+            fang.pos_y = -1;
+            fang.pos_z = - (interval) * ( i + 1);
+            fang.direction = 3;
+            fangtooths[i] = fang;
+        }
+
+    }
+}
 
 void animateFangtooths()
 {
 
     int i;
     glm::mat4 model = Matrix_Identity();
+    float fangSpeed = 0.01;
 
-    for (i  = 0; i < fangtooth_num; i++)
+
+    for (i=0; i < FANGTOOTH_NUM; i++)
     {
 
-        model = Matrix_Translate(-2, -1, (interval + 1) * i)
-              * Matrix_Scale(0.25f, 0.25f, 0.5f) * Matrix_Rotate_Z(M_PI_2);
+        if (i % 5 == 0)
+        {
+            fangSpeed *= 1.5;
+        }
+
+        if (fangtooths[i].direction == 4){
+            model =  Matrix_Translate(fangtooths[i].pos_x, fangtooths[i].pos_y, fangtooths[i].pos_z) *
+                Matrix_Scale(0.125f, 0.125f, 0.125f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2);
+        } else {
+            model =  Matrix_Translate(fangtooths[i].pos_x, fangtooths[i].pos_y, fangtooths[i].pos_z) *
+                 Matrix_Scale(0.125f, 0.125f, 0.125f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2) * Matrix_Rotate_Z(M_PI);
+
+        }
+
+
+
+        if ( fangtooths[i].pos_x <  - boundx)
+        {
+            fangtooths[i].direction = 3;
+            fangtooths[i].pos_x =   - (boundx + 0.01);
+
+        }
+
+        if (fangtooths[i].pos_x > boundx )
+        {
+            fangtooths[i].direction = 4;
+            fangtooths[i].pos_x =  boundx - 0.02;
+
+        }
+
+        if (fangtooths[i].direction == 4 ) {
+            fangtooths[i].pos_x -= fangSpeed;
+        }
+        else if (fangtooths[i].direction == 3 ) {
+            fangtooths[i].pos_x += fangSpeed;
+        }
+
+
         glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(object_id_uniform, FANGTOOTH);
         DrawVirtualObject("fangtooth");
 
-
     }
+
 
 }
 
