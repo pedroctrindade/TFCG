@@ -158,10 +158,14 @@ bool g_sPressed = false;
 bool g_dPressed = false;
 bool g_aPressed = false;
 
+int fangtooth_num = 10;
+int fishfood_num = 50;
+int cow_num = 3;
+
 // Define o tipo de câmera
 bool g_isFreeCamera = false;
 
-float movementDelta = 0.0010;
+float movementDelta = 0.0025;
 
 // "g_LeftMouseButtonPressed = true" se o usuário está com o botão esquerdo do mouse
 // pressionado no momento atual. Veja função MouseButtonCallback().
@@ -185,10 +189,8 @@ float g_ForearmAngleX = 0.0f;
 float g_TorsoPositionX = 0.0f;
 float g_TorsoPositionY = 0.0f;
 
-// Variáveis que controlam a posição do peixe;
-float fishPositionX = 0.0f;
-float fishPositionY = 0.0f;
-float fishPositionZ = 0.0f;
+
+float oceanSizeZ = 200.0f;
 // Variável que controla o tipo de projeção utilizada: perspectiva ou ortográfica.
 bool g_UsePerspectiveProjection = true;
 
@@ -198,6 +200,11 @@ bool g_ShowInfoText = true;
 bool keyPressedX = false;
 
 bool keyPressedY = false;
+
+
+float interval = oceanSizeZ / fangtooth_num;
+
+
 // Variáveis que definem um programa de GPU (shaders). Veja função LoadShadersFromFiles().
 GLuint vertex_shader_id;
 GLuint fragment_shader_id;
@@ -289,6 +296,7 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/fish.jpg");      // TextureImage0
     LoadTextureImage("../../data/fundo.jpg"); // TextureImage1
     LoadTextureImage("../../data/areia.jpg"); // TextureImage2
+    LoadTextureImage("../../data/fangtooth.jpg"); // TextureImage3
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel planemodel("../../data/plane.obj");
@@ -306,6 +314,10 @@ int main(int argc, char* argv[])
     ObjModel fishmodel("../../data/fish.obj");
     ComputeNormals(&fishmodel);
     BuildTrianglesAndAddToVirtualScene(&fishmodel);
+
+    ObjModel fangtoothmodel("../../data/fangtooth.obj");
+    ComputeNormals(&fangtoothmodel);
+    BuildTrianglesAndAddToVirtualScene(&fangtoothmodel);
 
     if ( argc > 1 )
     {
@@ -395,21 +407,30 @@ int main(int argc, char* argv[])
 
         if (g_dPressed) {
             glm::vec4 matriz_rotacao = Matrix_Rotate_Y(3.14159 / 2) * free_camera;
-            camera_position_c.x += movementDelta * matriz_rotacao.x ;
-            camera_position_c.z += movementDelta * matriz_rotacao.z ;
+            camera_position_c.x -= movementDelta * matriz_rotacao.x ;
+            camera_position_c.z -= movementDelta * matriz_rotacao.z ;
             adjusted = true;
         }
 
         if (g_aPressed) {
             glm::vec4 matriz_rotacao = Matrix_Rotate_Y(3.14159 / 2) * free_camera;
-            camera_position_c.x -=  movementDelta * matriz_rotacao.x ;
-            camera_position_c.z -= movementDelta * matriz_rotacao.z ;
+            camera_position_c.x +=  movementDelta * matriz_rotacao.x ;
+            camera_position_c.z += movementDelta * matriz_rotacao.z ;
             adjusted = true;
         }
 
-        if (camera_position_c.y < -1)
+        if (camera_position_c.y < -0.1)
         {
-            camera_position_c.y = -1;
+            camera_position_c.y = -0.1;
+        }
+
+        if (camera_position_c.x > 2)
+        {
+            camera_position_c.x = 2;
+        }
+        if (camera_position_c.x < -2 )
+        {
+            camera_position_c.x = -2;
         }
 
         camera_view_vector = free_camera;
@@ -426,7 +447,7 @@ int main(int argc, char* argv[])
         // Note que, no sistema de coordenadas da câmera, os planos near e far
         // estão no sentido negativo! Veja slides 190-193 do documento "Aula_09_Projecoes.pdf".
         float nearplane = -0.1f;  // Posição do "near plane"
-        float farplane  = -50.0f; // Posição do "far plane"
+        float farplane  = -150.0f; // Posição do "far plane"
 
         if (g_UsePerspectiveProjection)
         {
@@ -462,12 +483,13 @@ int main(int argc, char* argv[])
         #define COW  1
         #define FISH  2
         #define SPHERE 3
+        #define FANGTOOTH 4
         #define M_PI   3.14159265358979323846
         #define M_PI_2 1.57079632679489661923
 
         // Desenhamos o modelo da esfera
         model = Matrix_Translate(0.0f,0.0f,0.0f)
-              * Matrix_Scale(30.0f, -30.0f, 30.0f)
+              * Matrix_Scale(30.0f, -30.0f, 150.0f)
               * Matrix_Rotate_Z(0.6f)
               * Matrix_Rotate_X(0.2f)
               * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
@@ -475,15 +497,17 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, SPHERE);
         DrawVirtualObject("sphere");
 
-        // Desenhamos o modelo do coelho
-        /*model = Matrix_Translate(1.0f,0.0f,0.0f)
-              * Matrix_Rotate_X(g_AngleX + (float)glfwGetTime() * 0.1f);
-        glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(object_id_uniform, COW);
-        DrawVirtualObject("cow");*/
 
-
-        model =  Matrix_Translate(camera_position_c.x, camera_position_c.y, camera_position_c.z - 2) * Matrix_Scale(0.075f, 0.05f, 0.05f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2);
+        model =  Matrix_Translate(camera_position_c.x, camera_position_c.y - 0.5, camera_position_c.z - 2) *
+         Matrix_Scale(0.075f, 0.05f, 0.05f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2);
+         if (g_aPressed)
+         {
+             model *= Matrix_Rotate_X(M_PI_2 / 8) * Matrix_Rotate_Z(M_PI_2 / 16);
+         }
+                  if (g_dPressed)
+         {
+             model *= Matrix_Rotate_X(  - M_PI_2 / 8) * Matrix_Rotate_Z( - M_PI_2 / 16);
+         }
         //model += Matrix_Translate(camera_position_c.x, camera_position_c.y, camera_position_c.z);
         //        Matrix_Rotate_Y(- M_PI) * Matrix_Rotate_Z(M_PI);
         glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
@@ -491,7 +515,7 @@ int main(int argc, char* argv[])
         DrawVirtualObject("fish");
 
          // Desenhamos o plano do chão
-        model = Matrix_Translate(0.0f,-1.1f,0.0f) * Matrix_Scale(30.0f,30.0f,30.0f);
+        model = Matrix_Translate(0.0f,-1.1f,0.0f) * Matrix_Scale(30.0f,3.0f,300.0f);
         glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(object_id_uniform, PLANE);
         DrawVirtualObject("plane");
@@ -533,6 +557,27 @@ int main(int argc, char* argv[])
 
     // Fim do programa
     return 0;
+}
+
+
+void animateFangtooths()
+{
+
+    int i;
+    glm::mat4 model = Matrix_Identity();
+
+    for (i  = 0; i < fangtooth_num; i++)
+    {
+
+        model = Matrix_Translate(-2, -1, (interval + 1) * i)
+              * Matrix_Scale(0.25f, 0.25f, 0.5f) * Matrix_Rotate_Z(M_PI_2);
+        glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(object_id_uniform, FANGTOOTH);
+        DrawVirtualObject("fangtooth");
+
+
+    }
+
 }
 
 // Função que carrega uma imagem para ser utilizada como textura
@@ -668,6 +713,7 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(program_id, "TextureImage0"), 0);
     glUniform1i(glGetUniformLocation(program_id, "TextureImage1"), 1);
     glUniform1i(glGetUniformLocation(program_id, "TextureImage2"), 2);
+    glUniform1i(glGetUniformLocation(program_id, "TextureImage3"), 3);
     glUseProgram(0);
 }
 
@@ -1155,9 +1201,6 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         // Atualizamos parâmetros da câmera com os deslocamentos
         g_CameraTheta -= 0.001f*dx;
         g_CameraPhi   += 0.001f*dy;
-
-
-
 
 
         // Atualizamos as variáveis globais para armazenar a posição atual do

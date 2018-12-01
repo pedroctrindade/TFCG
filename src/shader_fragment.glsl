@@ -23,6 +23,7 @@ uniform mat4 projection;
 #define COW  1
 #define FISH  2
 #define SPHERE 3
+#define FANGTOOTH 4
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -33,6 +34,7 @@ uniform vec4 bbox_max;
 uniform sampler2D TextureImage0;
 uniform sampler2D TextureImage1;
 uniform sampler2D TextureImage2;
+uniform sampler2D TextureImage3;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec3 color;
@@ -69,7 +71,7 @@ void main()
     float U = 0.0;
     float V = 0.0;
 
-    if ( object_id == FISH )
+    if ( object_id == FISH || object_id == FANGTOOTH )
     {
         // PREENCHA AQUI as coordenadas de textura da esfera, computadas com
         // projeção esférica EM COORDENADAS DO MODELO. Utilize como referência
@@ -141,7 +143,7 @@ void main()
         V = (position_model.y - miny)/(maxy - miny);
 
     }
-    else if (  object_id == PLANE)
+    else if (  object_id == PLANE  )
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
         U = texcoords.x;
@@ -159,7 +161,11 @@ void main()
     {
         Kd0 = texture(TextureImage1, vec2(U,V)).rgb;
     }
+    if (object_id == FANGTOOTH)
+    {
+        Kd0 = texture(TextureImage3, vec2(U,V)).rgb;
 
+    }
     // Equação de Iluminação
     float lambert = max(0,dot(n,l));
     if(lambert == 0 && object_id == COW) Kd0 = texture(TextureImage1, vec2(U,V)).rgb;
