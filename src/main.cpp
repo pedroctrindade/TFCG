@@ -376,9 +376,9 @@ int main(int argc, char* argv[])
             camera_position_c  = glm::vec4(x,y,z,1.0f);
         }
 
-        if (free_camera.x < -2.0){
-            free_camera.x = -2;
-        }
+        //if (free_camera.x < -2.0){
+        //    free_camera.x = -2;
+        //}
         if (g_wPressed) {
             camera_position_c.z +=  movementDelta * free_camera.z;
             camera_position_c.y +=  movementDelta * free_camera.y;
@@ -407,6 +407,10 @@ int main(int argc, char* argv[])
             adjusted = true;
         }
 
+        if (camera_position_c.y < -1)
+        {
+            camera_position_c.y = -1;
+        }
 
         camera_view_vector = free_camera;
 
@@ -478,14 +482,10 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, COW);
         DrawVirtualObject("cow");*/
 
-        //        float y = r*sin(g_CameraPhi);
-        //float z = r*cos(g_CameraPhi)*cos(g_CameraTheta);
-        //float x = r*cos(g_CameraPhi)*sin(g_CameraTheta);
 
-        model = Matrix_Translate(- camera_position_c.x , - camera_position_c.y , - camera_position_c.z + 2)
-          * Matrix_Scale(0.075f, 0.05f, 0.05f) ;
-        //model = model * Matrix_Rotate_X(cos(g_CameraPhi)*sin(g_CameraTheta)) *
-        //        Matrix_Rotate_Y(sin(g_CameraPhi));
+        model =  Matrix_Translate(camera_position_c.x, camera_position_c.y, camera_position_c.z - 2) * Matrix_Scale(0.075f, 0.05f, 0.05f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2);
+        //model += Matrix_Translate(camera_position_c.x, camera_position_c.y, camera_position_c.z);
+        //        Matrix_Rotate_Y(- M_PI) * Matrix_Rotate_Z(M_PI);
         glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(object_id_uniform, FISH);
         DrawVirtualObject("fish");
@@ -1295,7 +1295,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     //}
 
     // Coordenada X da câmera
-   /* if (key == GLFW_KEY_D && action == GLFW_PRESS)
+   if (key == GLFW_KEY_D && action == GLFW_PRESS)
     {
         g_dPressed = true;
     }
@@ -1313,7 +1313,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     {
         g_aPressed = false;
     }
-*/
+
     // Se o usuário apertar a tecla espaço, resetamos os ângulos de Euler para zero.
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
     {
