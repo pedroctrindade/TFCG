@@ -144,8 +144,6 @@ std::map<std::string, SceneObject> g_VirtualScene;
 // Pilha que guardará as matrizes de modelagem.
 std::stack<glm::mat4>  g_MatrixStack;
 
-#define FISHBOUNDX 2
-
 // Razão de proporção da janela (largura/altura). Veja função FramebufferSizeCallback().
 float g_ScreenRatio = 1.0f;
 
@@ -153,6 +151,17 @@ float g_ScreenRatio = 1.0f;
 float g_AngleX = 0.0f;
 float g_AngleY = 0.0f;
 float g_AngleZ = 0.0f;
+
+bool adjusted = false;
+bool g_wPressed = false;
+bool g_sPressed = false;
+bool g_dPressed = false;
+bool g_aPressed = false;
+
+// Define o tipo de câmera
+bool g_isFreeCamera = false;
+
+float movementDelta = 0.0010;
 
 // "g_LeftMouseButtonPressed = true" se o usuário está com o botão esquerdo do mouse
 // pressionado no momento atual. Veja função MouseButtonCallback().
@@ -166,7 +175,7 @@ bool g_MiddleMouseButtonPressed = false; // Análogo para botão do meio do mous
 // renderização.
 float g_CameraTheta = 0.0f; // Ângulo no plano ZX em relação ao eixo Z
 float g_CameraPhi = 0.375f;   // Ângulo em relação ao eixo Y
-float g_CameraDistance = 7.5f; // Distância da câmera para a origem
+float g_CameraDistance = 2.5f; // Distância da câmera para a origem
 
 // Variáveis que controlam rotação do antebraço
 float g_ForearmAngleZ = 0.0f;
@@ -320,6 +329,8 @@ int main(int argc, char* argv[])
     glm::mat4 the_projection;
     glm::mat4 the_model;
     glm::mat4 the_view;
+    //glm::vec4 camera_position_c  = glm::vec4(x,y,z,1.0f); // Ponto "c", centro da câmera
+    glm::vec4 camera_position_c;
 
     // Ficamos em loop, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
@@ -342,6 +353,7 @@ int main(int argc, char* argv[])
         // os shaders de vértice e fragmentos).
         glUseProgram(program_id);
 
+
         // Computamos a posição da câmera utilizando coordenadas esféricas.  As
         // variáveis g_CameraDistance, g_CameraPhi, e g_CameraTheta são
         // controladas pelo mouse do usuário. Veja as funções CursorPosCallback()
@@ -353,10 +365,52 @@ int main(int argc, char* argv[])
 
         // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
         // Veja slides 172-182 do documento "Aula_08_Sistemas_de_Coordenadas.pdf".
-        glm::vec4 camera_position_c  = glm::vec4(x,y,z,1.0f); // Ponto "c", centro da câmera
+
         glm::vec4 camera_lookat_l    = glm::vec4(0.0f,0.0f,0.0f,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
         glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
         glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
+
+        glm::vec4 free_camera = glm::vec4(-x,-y,-z,0.0f);
+
+        if(!adjusted){
+            camera_position_c  = glm::vec4(x,y,z,1.0f);
+        }
+
+        if (free_camera.x < -2.0){
+            free_camera.x = -2;
+        }
+        if (g_wPressed) {
+            camera_position_c.z +=  movementDelta * free_camera.z;
+            camera_position_c.y +=  movementDelta * free_camera.y;
+            camera_position_c.x +=  movementDelta * free_camera.x;
+            adjusted = true;
+        }
+
+        if (g_sPressed) {
+            camera_position_c.z -=  movementDelta * free_camera.z;
+            camera_position_c.y -=  movementDelta * free_camera.y;
+            camera_position_c.x -=  movementDelta * free_camera.x;
+            adjusted = true;
+        }
+
+        if (g_dPressed) {
+            glm::vec4 matriz_rotacao = Matrix_Rotate_Y(3.14159 / 2) * free_camera;
+            camera_position_c.x += movementDelta * matriz_rotacao.x ;
+            camera_position_c.z += movementDelta * matriz_rotacao.z ;
+            adjusted = true;
+        }
+
+        if (g_aPressed) {
+            glm::vec4 matriz_rotacao = Matrix_Rotate_Y(3.14159 / 2) * free_camera;
+            camera_position_c.x -=  movementDelta * matriz_rotacao.x ;
+            camera_position_c.z -= movementDelta * matriz_rotacao.z ;
+            adjusted = true;
+        }
+
+
+        camera_view_vector = free_camera;
+
+
 
         // Computamos a matriz "View" utilizando os parâmetros da câmera para
         // definir o sistema de coordenadas da câmera.  Veja slide 186 do documento "Aula_08_Sistemas_de_Coordenadas.pdf".
@@ -424,13 +478,19 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, COW);
         DrawVirtualObject("cow");*/
 
-        // Desenhamos o plano do chão
-        model = Matrix_Translate(fishPositionX,0.0f,fishPositionZ)
-        * Matrix_Scale(0.075f, 0.05f, 0.05f) * Matrix_Rotate_X(M_PI_2 * 3) * Matrix_Rotate_Z(M_PI_2 * 3) ;
+        //        float y = r*sin(g_CameraPhi);
+        //float z = r*cos(g_CameraPhi)*cos(g_CameraTheta);
+        //float x = r*cos(g_CameraPhi)*sin(g_CameraTheta);
+
+        model = Matrix_Translate(- camera_position_c.x , - camera_position_c.y , - camera_position_c.z + 2)
+          * Matrix_Scale(0.075f, 0.05f, 0.05f) ;
+        //model = model * Matrix_Rotate_X(cos(g_CameraPhi)*sin(g_CameraTheta)) *
+        //        Matrix_Rotate_Y(sin(g_CameraPhi));
         glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(object_id_uniform, FISH);
         DrawVirtualObject("fish");
 
+         // Desenhamos o plano do chão
         model = Matrix_Translate(0.0f,-1.1f,0.0f) * Matrix_Scale(30.0f,30.0f,30.0f);
         glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(object_id_uniform, PLANE);
@@ -1082,19 +1142,23 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
         float dx = xpos - g_LastCursorPosX;
         float dy = ypos - g_LastCursorPosY;
 
-        // Atualizamos parâmetros da câmera com os deslocamentos
-        g_CameraTheta -= 0.01f*dx;
-        g_CameraPhi   += 0.01f*dy;
-
         // Em coordenadas esféricas, o ângulo phi deve ficar entre -pi/2 e +pi/2.
         float phimax = 3.141592f/8;
-        float phimin = 0;
+        float phimin = - 3.141592f/8;
 
         if (g_CameraPhi > phimax)
             g_CameraPhi = phimax;
 
         if (g_CameraPhi < phimin)
             g_CameraPhi = phimin;
+
+        // Atualizamos parâmetros da câmera com os deslocamentos
+        g_CameraTheta -= 0.001f*dx;
+        g_CameraPhi   += 0.001f*dy;
+
+
+
+
 
         // Atualizamos as variáveis globais para armazenar a posição atual do
         // cursor como sendo a última posição conhecida do cursor.
@@ -1191,43 +1255,65 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     {
         g_AngleZ += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
     }
-    if ((key == GLFW_KEY_A && action == GLFW_REPEAT) || (key == GLFW_KEY_A && action == GLFW_PRESS))
-      {
-        fishPositionX -= 0.35;
-        if ( abs(fishPositionX) >= 2.0 )
-        {
-            fishPositionX = - FISHBOUNDX;
-        }
-      }
-    if ((key == GLFW_KEY_D && action == GLFW_REPEAT) || (key == GLFW_KEY_D && action == GLFW_PRESS))
-      {
-          fishPositionX += 0.35;
-        if ( fishPositionX >= FISHBOUNDX)
-        {
-            fishPositionX = FISHBOUNDX;
-        }
-      }
-    if ((key == GLFW_KEY_W && action == GLFW_REPEAT) || (key == GLFW_KEY_W && action == GLFW_PRESS))
+      if (key == GLFW_KEY_P && action == GLFW_PRESS)
     {
-        fishPositionZ -= 0.35;
-        if ( abs(fishPositionZ) >= FISHBOUNDX)
-        {
-            fishPositionZ = -FISHBOUNDX;
-        }
-
+        g_UsePerspectiveProjection = true;
     }
 
-    if ((key == GLFW_KEY_S && action == GLFW_REPEAT) || (key == GLFW_KEY_S && action == GLFW_PRESS))
+    // Se o usuário apertar a tecla O, utilizamos projeção ortográfica.
+    if (key == GLFW_KEY_O && action == GLFW_PRESS)
     {
-        fishPositionZ += 0.35;
-        if ( abs(fishPositionZ) >= FISHBOUNDX)
-        {
-            fishPositionZ = FISHBOUNDX;
-        }
+        g_UsePerspectiveProjection = false;
+    }
 
+    // Se o usuário apertar a tecla H, fazemos um "toggle" do texto informativo mostrado na tela.
+    if (key == GLFW_KEY_H && action == GLFW_PRESS)
+    {
+        g_ShowInfoText = !g_ShowInfoText;
     }
 
 
+    // Coordenada Z da câmera
+    if (key == GLFW_KEY_W && action == GLFW_PRESS)
+    {
+        g_wPressed = true;
+    }
+
+    if (key == GLFW_KEY_W && action == GLFW_RELEASE)
+    {
+        g_wPressed = false;
+    }
+
+
+    //if (key == GLFW_KEY_S && action == GLFW_PRESS)
+    //{
+    //    g_sPressed = true;
+    //}
+    //if (key == GLFW_KEY_S && action == GLFW_RELEASE)
+    //{
+    //    g_sPressed = false;
+    //}
+
+    // Coordenada X da câmera
+   /* if (key == GLFW_KEY_D && action == GLFW_PRESS)
+    {
+        g_dPressed = true;
+    }
+    if (key == GLFW_KEY_D && action == GLFW_RELEASE)
+    {
+        g_dPressed = false;
+    }
+
+
+    if (key == GLFW_KEY_A && action == GLFW_PRESS)
+    {
+        g_aPressed = true;
+    }
+    if (key == GLFW_KEY_A && action == GLFW_RELEASE)
+    {
+        g_aPressed = false;
+    }
+*/
     // Se o usuário apertar a tecla espaço, resetamos os ângulos de Euler para zero.
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
     {
