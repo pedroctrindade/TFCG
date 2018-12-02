@@ -81,7 +81,9 @@ struct ObjModel
 void PushMatrix(glm::mat4 M);
 void PopMatrix(glm::mat4& M);
 
-void animateFangtooths();
+void animateFangtooths(float position_z, float timeDelta);
+void animateGame(float dtime);
+void RenderGame(float dtime, GLFWwindow* window);
 // Declaração de várias funções utilizadas em main().  Essas estão definidas
 // logo após a definição de main() neste arquivo.
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
@@ -94,6 +96,8 @@ GLuint LoadShader_Fragment(const char* filename); // Carrega um fragment shader
 void LoadShader(const char* filename, GLuint shader_id); // Função utilizada pelas duas acima
 GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id); // Cria um programa de GPU
 void PrintObjModelInfo(ObjModel*); // Função para debugging
+
+
 
 // Declaração de funções auxiliares para renderizar texto dentro da janela
 // OpenGL. Estas funções estão definidas no arquivo "textrendering.cpp".
@@ -168,6 +172,9 @@ bool g_aPressed = false;
 #define FISHFOOD_NUM 50
 #define COW_NUM 3
 
+#define MULTIPLY_FACTOR 300
+
+int fishlives = 3;
 // Define o tipo de câmera
 bool g_isFreeCamera = false;
 
@@ -196,7 +203,7 @@ float g_TorsoPositionX = 0.0f;
 float g_TorsoPositionY = 0.0f;
 
 GenericControl fangtooths [FANGTOOTH_NUM];
-
+GenericControl cam;
 
 float oceanSizeZ = 150.0f;
 // Variável que controla o tipo de projeção utilizada: perspectiva ou ortográfica.
@@ -351,81 +358,79 @@ int main(int argc, char* argv[])
     glm::mat4 the_projection;
     glm::mat4 the_model;
     glm::mat4 the_view;
-    //glm::vec4 camera_position_c  = glm::vec4(x,y,z,1.0f); // Ponto "c", centro da câmera
-    glm::vec4 camera_position_c;
+//    glm::vec4 camera_position_c  = glm::vec4(x,y,z,1.0f); // Ponto "c", centro da câmera
+
+    float previous_time = (float) glfwGetTime();
 
     // Ficamos em loop, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
     {
-        // Aqui executamos as operações de renderização
+        float dtime = (float)glfwGetTime() - previous_time;
+        previous_time = (float) glfwGetTime();
 
-        // Definimos a cor do "fundo" do framebuffer como branco.  Tal cor é
-        // definida como coeficientes RGBA: Red, Green, Blue, Alpha; isto é:
-        // Vermelho, Verde, Azul, Alpha (valor de transparência).
-        // Conversaremos sobre sistemas de cores nas aulas de Modelos de Iluminação.
-        //
-        //           R     G     B     A
-        glClearColor(0.01f, 0.42f, 0.76f, 1.0f);
+        RenderGame(dtime, window);
 
-        // "Pintamos" todos os pixels do framebuffer com a cor definida acima,
-        // e também resetamos todos os pixels do Z-buffer (depth buffer).
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glfwPollEvents();
+    }
 
-        // Pedimos para a GPU utilizar o programa de GPU criado acima (contendo
-        // os shaders de vértice e fragmentos).
-        glUseProgram(program_id);
+    // Finalizamos o uso dos recursos do sistema operacional
+    glfwTerminate();
+
+    // Fim do programa
+    return 0;
+}
 
 
-        // Computamos a posição da câmera utilizando coordenadas esféricas.  As
-        // variáveis g_CameraDistance, g_CameraPhi, e g_CameraTheta são
-        // controladas pelo mouse do usuário. Veja as funções CursorPosCallback()
-        // e ScrollCallback().
+void RenderGame(float dtime, GLFWwindow* window)
+{
         float r = g_CameraDistance;
         float y = r*sin(g_CameraPhi);
         float z = r*cos(g_CameraPhi)*cos(g_CameraTheta);
         float x = r*cos(g_CameraPhi)*sin(g_CameraTheta);
 
-        // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
-        // Veja slides 172-182 do documento "Aula_08_Sistemas_de_Coordenadas.pdf".
+        float movement = movementDelta * ( dtime * MULTIPLY_FACTOR);
+
+        glm::vec4 camera_position_c;
+
+        if(!adjusted){
+            camera_position_c  = glm::vec4(x,y,z,1.0f);
+        } else {
+            camera_position_c = glm::vec4( cam.pos_x, cam.pos_y, cam.pos_z, 1.0f);
+        }
+
+        glClearColor(0.01f, 0.42f, 0.76f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glUseProgram(program_id);
+
 
         glm::vec4 camera_lookat_l    = glm::vec4(0.0f,0.0f,0.0f,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
         glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
         glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
-
         glm::vec4 free_camera = glm::vec4(-x,-y,-z,0.0f);
 
-        if(!adjusted){
-            camera_position_c  = glm::vec4(x,y,z,1.0f);
-        }
-
-        //if (free_camera.x < -2.0){
-        //    free_camera.x = -2;
-        //}
         if (g_wPressed) {
-            camera_position_c.z +=  movementDelta * free_camera.z;
-            //camera_position_c.y +=  movementDelta * free_camera.y;
-            camera_position_c.x +=  movementDelta * free_camera.x;
+            camera_position_c.z +=  movement * free_camera.z;
+            camera_position_c.x +=  movement * free_camera.x;
             adjusted = true;
         }
 
         if (g_sPressed) {
-            camera_position_c.z -=  movementDelta * free_camera.z;
-            //camera_position_c.y -=  movementDelta * free_camera.y;
-            camera_position_c.x -=  movementDelta * free_camera.x;
+            camera_position_c.z -= movement * free_camera.z;
+            camera_position_c.x -=  movement * free_camera.x;
             adjusted = true;
         }
 
         if (g_dPressed) {
             glm::vec4 matriz_rotacao = Matrix_Rotate_Y(3.14159 / 2) * free_camera;
-            camera_position_c.x -= movementDelta * matriz_rotacao.x ;
-            camera_position_c.z -= movementDelta * matriz_rotacao.z ;
+            camera_position_c.x -= movement * matriz_rotacao.x ;
+            camera_position_c.z -= movement * matriz_rotacao.z ;
             adjusted = true;
         }
 
         if (g_aPressed) {
             glm::vec4 matriz_rotacao = Matrix_Rotate_Y(3.14159 / 2) * free_camera;
-            camera_position_c.x +=  movementDelta * matriz_rotacao.x ;
-            camera_position_c.z += movementDelta * matriz_rotacao.z ;
+            camera_position_c.x +=  movement * matriz_rotacao.x ;
+            camera_position_c.z += movement * matriz_rotacao.z ;
             adjusted = true;
         }
 
@@ -448,36 +453,27 @@ int main(int argc, char* argv[])
             camera_position_c.z = oceanSizeZ -15;
         }
 
+
+        cam.pos_x = camera_position_c.x;
+        cam.pos_y = camera_position_c.y;
+        cam.pos_z = camera_position_c.z;
+
         camera_view_vector = free_camera;
 
-
-
-        // Computamos a matriz "View" utilizando os parâmetros da câmera para
-        // definir o sistema de coordenadas da câmera.  Veja slide 186 do documento "Aula_08_Sistemas_de_Coordenadas.pdf".
         glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
 
-        // Agora computamos a matriz de Projeção.
         glm::mat4 projection;
 
-        // Note que, no sistema de coordenadas da câmera, os planos near e far
-        // estão no sentido negativo! Veja slides 190-193 do documento "Aula_09_Projecoes.pdf".
         float nearplane = -0.1f;  // Posição do "near plane"
         float farplane  = -150.0f; // Posição do "far plane"
 
         if (g_UsePerspectiveProjection)
         {
-            // Projeção Perspectiva.
-            // Para definição do field of view (FOV), veja slide 227 do documento "Aula_09_Projecoes.pdf".
             float field_of_view = 3.141592 / 3.0f;
             projection = Matrix_Perspective(field_of_view, g_ScreenRatio, nearplane, farplane);
         }
         else
         {
-            // Projeção Ortográfica.
-            // Para definição dos valores l, r, b, t ("left", "right", "bottom", "top"),
-            // PARA PROJEÇÃO ORTOGRÁFICA veja slide 236 do documento "Aula_09_Projecoes.pdf".
-            // Para simular um "zoom" ortográfico, computamos o valor de "t"
-            // utilizando a variável g_CameraDistance.
             float t = 1.5f*g_CameraDistance/2.5f;
             float b = -t;
             float r = t*g_ScreenRatio;
@@ -487,9 +483,6 @@ int main(int argc, char* argv[])
 
         glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
 
-        // Enviamos as matrizes "view" e "projection" para a placa de vídeo
-        // (GPU). Veja o arquivo "shader_vertex.glsl", onde estas são
-        // efetivamente aplicadas em todos os pontos.
         glUniformMatrix4fv(view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
@@ -502,9 +495,8 @@ int main(int argc, char* argv[])
         #define M_PI   3.14159265358979323846
         #define M_PI_2 1.57079632679489661923
 
-        // Desenhamos o modelo da esfera
         model = Matrix_Translate(0.0f,0.0f,0.0f)
-              * Matrix_Scale(15.0f, -15.0f, oceanSizeZ)
+              * Matrix_Scale(30.0f, -30.0f, oceanSizeZ)
               * Matrix_Rotate_Z(0.6f)
               * Matrix_Rotate_X(0.2f)
               * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
@@ -512,7 +504,7 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, SPHERE);
         DrawVirtualObject("sphere");
 
-        animateFangtooths();
+        animateFangtooths(camera_position_c.z - 2, dtime);
 
         model =  Matrix_Translate(camera_position_c.x, camera_position_c.y - 1.5, camera_position_c.z - 2) *
          Matrix_Scale(0.075f, 0.05f, 0.05f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2);
@@ -537,53 +529,24 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(object_id_uniform, PLANE);
         DrawVirtualObject("plane");
-        // Pegamos um vértice com coordenadas de modelo (0.5, 0.5, 0.5, 1) e o
-        // passamos por todos os sistemas de coordenadas armazenados nas
-        // matrizes the_model, the_view, e the_projection; e escrevemos na tela
-        // as matrizes e pontos resultantes dessas transformações.
-        //glm::vec4 p_model(0.5f, 0.5f, 0.5f, 1.0f);
-        //TextRendering_ShowModelViewProjection(window, projection, view, model, p_model);
 
-        // Imprimimos na tela os ângulos de Euler que controlam a rotação do
-        // terceiro cubo.
+
         TextRendering_ShowEulerAngles(window);
 
-        // Imprimimos na informação sobre a matriz de projeção sendo utilizada.
         TextRendering_ShowProjection(window);
 
-        // Imprimimos na tela informação sobre o número de quadros renderizados
-        // por segundo (frames per second).
         TextRendering_ShowFramesPerSecond(window);
 
-        // O framebuffer onde OpenGL executa as operações de renderização não
-        // é o mesmo que está sendo mostrado para o usuário, caso contrário
-        // seria possível ver artefatos conhecidos como "screen tearing". A
-        // chamada abaixo faz a troca dos buffers, mostrando para o usuário
-        // tudo que foi renderizado pelas funções acima.
-        // Veja o link: Veja o link: https://en.wikipedia.org/w/index.php?title=Multiple_buffering&oldid=793452829#Double_buffering_in_computer_graphics
         glfwSwapBuffers(window);
-
-        // Verificamos com o sistema operacional se houve alguma interação do
-        // usuário (teclado, mouse, ...). Caso positivo, as funções de callback
-        // definidas anteriormente usando glfwSet*Callback() serão chamadas
-        // pela biblioteca GLFW.
-        glfwPollEvents();
-    }
-
-    // Finalizamos o uso dos recursos do sistema operacional
-    glfwTerminate();
-
-    // Fim do programa
-    return 0;
 }
 
 void loadFishFood() {
-    interval = oceanSizeZ / FISHFOOD_NUM;
-    int i;
+    //interval = oceanSizeZ / FISHFOOD_NUM;
+//    int i;
 
-    srand (time(NULL));
+    //srand (time(NULL));
 
-    int random_n = rand() % 40 + 1;
+  //  int random_n = rand() % 40 + 1;
    // for (i = 0; i < FISHFOOD_NUM; i++)
     //{
     /*        GenericControl food;
@@ -631,7 +594,7 @@ void loadFangTooth(){
     }
 }
 
-void animateFangtooths()
+void animateFangtooths(float position_z, float timeDelta)
 {
 
     int i;
@@ -642,53 +605,63 @@ void animateFangtooths()
     for (i=0; i < FANGTOOTH_NUM; i++)
     {
 
-        if (i % 5 == 0)
-        {
-            fangSpeed *= 1.5;
-        }
+        if ( abs(fangtooths[i].pos_z) - abs(position_z) <= 30 && abs(fangtooths[i].pos_z) - abs(position_z) >= -5) {
 
-        if (fangtooths[i].direction == 4){
-            model =  Matrix_Translate(fangtooths[i].pos_x, fangtooths[i].pos_y, fangtooths[i].pos_z) *
-                Matrix_Scale(0.125f, 0.125f, 0.125f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2);
-        } else {
-            model =  Matrix_Translate(fangtooths[i].pos_x, fangtooths[i].pos_y, fangtooths[i].pos_z) *
-                 Matrix_Scale(0.125f, 0.125f, 0.125f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2) * Matrix_Rotate_Z(M_PI);
+            if (i % 3 == 0)
+            {
+                fangSpeed *= 2.0;
+            }
 
-        }
+            if (fangtooths[i].direction == 4){
+                model =  Matrix_Translate(fangtooths[i].pos_x, fangtooths[i].pos_y, fangtooths[i].pos_z) *
+                    Matrix_Scale(0.125f, 0.125f, 0.125f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2);
+            } else {
+                model =  Matrix_Translate(fangtooths[i].pos_x, fangtooths[i].pos_y, fangtooths[i].pos_z) *
+                     Matrix_Scale(0.125f, 0.125f, 0.125f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2) * Matrix_Rotate_Z(M_PI);
 
-
-
-        if ( fangtooths[i].pos_x <  - boundx)
-        {
-            fangtooths[i].direction = 3;
-            fangtooths[i].pos_x =   - (boundx + 0.01);
-
-        }
-
-        if (fangtooths[i].pos_x > boundx )
-        {
-            fangtooths[i].direction = 4;
-            fangtooths[i].pos_x =  boundx - 0.02;
-
-        }
-
-        if (fangtooths[i].direction == 4 ) {
-            fangtooths[i].pos_x -= fangSpeed;
-        }
-        else if (fangtooths[i].direction == 3 ) {
-            fangtooths[i].pos_x += fangSpeed;
-        }
+            }
 
 
-        glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(object_id_uniform, FANGTOOTH);
-        DrawVirtualObject("fangtooth");
 
+            if ( fangtooths[i].pos_x <  - boundx)
+            {
+                fangtooths[i].direction = 3;
+                fangtooths[i].pos_x =   - (boundx + 0.01);
+
+            }
+
+            if (fangtooths[i].pos_x > boundx )
+            {
+                fangtooths[i].direction = 4;
+                fangtooths[i].pos_x =  boundx - 0.02;
+
+            }
+
+            if (fangtooths[i].direction == 4 ) {
+                fangtooths[i].pos_x -= fangSpeed * timeDelta * ( MULTIPLY_FACTOR + 50) ;
+            }
+            else if (fangtooths[i].direction == 3 ) {
+                fangtooths[i].pos_x += fangSpeed * timeDelta * ( MULTIPLY_FACTOR + 50);
+            }
+
+
+            glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(object_id_uniform, FANGTOOTH);
+            DrawVirtualObject("fangtooth");
+            }
     }
 
 
 }
 
+
+void RenderGame(float dtime)
+{
+
+
+
+
+}
 // Função que carrega uma imagem para ser utilizada como textura
 void LoadTextureImage(const char* filename)
 {
