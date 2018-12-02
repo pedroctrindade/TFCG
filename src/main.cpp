@@ -84,6 +84,7 @@ void PopMatrix(glm::mat4& M);
 void animateFangtooths(float position_z, float timeDelta);
 void animateGame(float dtime);
 void RenderGame(float dtime, GLFWwindow* window);
+void resetGame();
 // Declaração de várias funções utilizadas em main().  Essas estão definidas
 // logo após a definição de main() neste arquivo.
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
@@ -167,7 +168,7 @@ bool g_wPressed = false;
 bool g_sPressed = false;
 bool g_dPressed = false;
 bool g_aPressed = false;
-
+bool g_enterPressed = false;
 #define FANGTOOTH_NUM 20
 #define FISHFOOD_NUM 50
 #define COW_NUM 3
@@ -177,6 +178,7 @@ bool g_aPressed = false;
 int fishlives = 3;
 // Define o tipo de câmera
 bool g_isFreeCamera = false;
+bool gameStarted = false;
 
 float movementDelta = 0.01;
 
@@ -203,7 +205,7 @@ float g_TorsoPositionX = 0.0f;
 float g_TorsoPositionY = 0.0f;
 
 float seconds_togo = 30.0f;
-
+int points = 0;
 GenericControl fangtooths [FANGTOOTH_NUM];
 GenericControl cam;
 
@@ -218,6 +220,7 @@ bool keyPressedX = false;
 
 bool keyPressedY = false;
 
+bool endGame = true;
 
 float interval = oceanSizeZ / FANGTOOTH_NUM;
 
@@ -374,12 +377,30 @@ int main(int argc, char* argv[])
 
         RenderGame(dtime, window);
 
-        if (seconds_togo > 0 ){
-            if (totalTime >= 1.0)
+        if (fishlives <= 0)
+        {
+            endGame = true;
+        }
+
+        if (gameStarted && !endGame){
+            if (seconds_togo > 0 ){
+                if (totalTime >= 1.0)
+                {
+                    seconds_togo -= 1;
+                    totalTime =0;
+                }
+            } else
             {
-                seconds_togo -= 1;
-                totalTime =0;
+                gameStarted = false;
+                endGame = true;
             }
+        }
+
+        if(g_enterPressed && endGame)
+        {
+            resetGame();
+            g_enterPressed = false;
+            endGame = false;
         }
 
         glfwPollEvents();
@@ -393,6 +414,26 @@ int main(int argc, char* argv[])
 }
 
 
+void resetGame()
+{
+    g_CameraTheta = 0.0f; // Ângulo no plano ZX em relação ao eixo Z
+    g_CameraPhi = 0.375f;   // Ângulo em relação ao eixo Y
+    g_CameraDistance = 2.5f; // Distância da câmera para a origem
+
+    float r = g_CameraDistance;
+    float y = r*sin(g_CameraPhi);
+    float z = r*cos(g_CameraPhi)*cos(g_CameraTheta);
+    float x = r*cos(g_CameraPhi)*sin(g_CameraTheta);
+
+
+    gameStarted = true;
+    cam.pos_x = x;
+    cam.pos_y = y;
+    cam.pos_z = z;
+
+    fishlives = 3;
+    seconds_togo = 30.0f;
+}
 void RenderGame(float dtime, GLFWwindow* window)
 {
         float r = g_CameraDistance;
@@ -400,13 +441,17 @@ void RenderGame(float dtime, GLFWwindow* window)
         float z = r*cos(g_CameraPhi)*cos(g_CameraTheta);
         float x = r*cos(g_CameraPhi)*sin(g_CameraTheta);
 
-        float movement = movementDelta * ( dtime * MULTIPLY_FACTOR);
+        float movement = 0;
+        if (gameStarted && !endGame) {
+           movement = movementDelta * ( dtime * MULTIPLY_FACTOR);
+        }
 
         glm::vec4 camera_position_c;
 
         if(!adjusted){
             camera_position_c  = glm::vec4(x,y,z,1.0f);
         } else {
+            adjusted = true;
             camera_position_c = glm::vec4( cam.pos_x, cam.pos_y, cam.pos_z, 1.0f);
         }
 
@@ -415,75 +460,82 @@ void RenderGame(float dtime, GLFWwindow* window)
         glUseProgram(program_id);
 
 
+        // para camera lookat
         glm::vec4 camera_lookat_l    = glm::vec4(0.0f,0.0f,0.0f,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
         glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
         glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
+
+        // para camera free
         glm::vec4 free_camera = glm::vec4(-x,-y,-z,0.0f);
-        if (fishlives > 0 && seconds_togo >0 )
-        {
-            if (g_wPressed) {
-                camera_position_c.z +=  movement * free_camera.z;
-                camera_position_c.x +=  movement * free_camera.x;
-                adjusted = true;
+
+        if (gameStarted || endGame) {
+
+            if (fishlives > 0 && seconds_togo >0 && !endGame)
+            {
+                if (g_wPressed) {
+                    camera_position_c.z +=  movement * free_camera.z;
+                    camera_position_c.x +=  movement * free_camera.x;
+                    adjusted = true;
+                }
+
+                if (g_sPressed) {
+                    camera_position_c.z -= movement * free_camera.z;
+                    camera_position_c.x -=  movement * free_camera.x;
+                    adjusted = true;
+                }
+
+                if (g_dPressed) {
+                    glm::vec4 matriz_rotacao = Matrix_Rotate_Y(3.14159 / 2) * free_camera;
+                    camera_position_c.x -= movement * matriz_rotacao.x ;
+                    camera_position_c.z -= movement * matriz_rotacao.z ;
+                    adjusted = true;
+                }
+
+                if (g_aPressed) {
+                    glm::vec4 matriz_rotacao = Matrix_Rotate_Y(3.14159 / 2) * free_camera;
+                    camera_position_c.x +=  movement * matriz_rotacao.x ;
+                    camera_position_c.z += movement * matriz_rotacao.z ;
+                    adjusted = true;
+                }
             }
 
-            if (g_sPressed) {
-                camera_position_c.z -= movement * free_camera.z;
-                camera_position_c.x -=  movement * free_camera.x;
-                adjusted = true;
+            if (gameStarted) {
+                if (abs(camera_position_c.z) >= (oceanSizeZ - 2) )
+                {
+                    camera_position_c.z = - oceanSizeZ + 2;
+                }
+                if (camera_position_c.y < -0.1)
+                {
+                    camera_position_c.y = -0.1;
+                }
+
+                if (camera_position_c.x > 2)
+                {
+                    camera_position_c.x = 2;
+                }
+                if (camera_position_c.x < -2 )
+                {
+                    camera_position_c.x = -2;
+                }
+
+                if (camera_position_c.z > oceanSizeZ - 15)
+                {
+                    camera_position_c.z = oceanSizeZ -15;
+                }
             }
 
-            if (g_dPressed) {
-                glm::vec4 matriz_rotacao = Matrix_Rotate_Y(3.14159 / 2) * free_camera;
-                camera_position_c.x -= movement * matriz_rotacao.x ;
-                camera_position_c.z -= movement * matriz_rotacao.z ;
-                adjusted = true;
-            }
-
-            if (g_aPressed) {
-                glm::vec4 matriz_rotacao = Matrix_Rotate_Y(3.14159 / 2) * free_camera;
-                camera_position_c.x +=  movement * matriz_rotacao.x ;
-                camera_position_c.z += movement * matriz_rotacao.z ;
-                adjusted = true;
-            }
+            camera_view_vector = free_camera;
         }
-
-        if (abs(camera_position_c.z) >= (oceanSizeZ - 2) )
-        {
-            camera_position_c.z = - oceanSizeZ + 2;
-        }
-        if (camera_position_c.y < -0.1)
-        {
-            camera_position_c.y = -0.1;
-        }
-
-        if (camera_position_c.x > 2)
-        {
-            camera_position_c.x = 2;
-        }
-        if (camera_position_c.x < -2 )
-        {
-            camera_position_c.x = -2;
-        }
-
-        if (camera_position_c.z > oceanSizeZ - 15)
-        {
-            camera_position_c.z = oceanSizeZ -15;
-        }
-
-
         cam.pos_x = camera_position_c.x;
         cam.pos_y = camera_position_c.y;
         cam.pos_z = camera_position_c.z;
-
-        camera_view_vector = free_camera;
 
         glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
 
         glm::mat4 projection;
 
         float nearplane = -0.1f;  // Posição do "near plane"
-        float farplane  = -150.0f; // Posição do "far plane"
+        float farplane  = -160.0f; // Posição do "far plane"
 
         if (g_UsePerspectiveProjection)
         {
@@ -524,13 +576,20 @@ void RenderGame(float dtime, GLFWwindow* window)
 
         animateFangtooths(camera_position_c.z - 2, dtime);
 
-        model =  Matrix_Translate(camera_position_c.x, camera_position_c.y - 1.5, camera_position_c.z - 2) *
+        if (!gameStarted){
+              model =  Matrix_Translate(0.0f, -0.5f, 1.0f) *
          Matrix_Scale(0.075f, 0.05f, 0.05f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2);
-         if (g_aPressed && seconds_togo > 0 && fishlives > 0)
+
+        } else {
+         model =  Matrix_Translate(camera_position_c.x, camera_position_c.y - 1.5, camera_position_c.z - 2) *
+         Matrix_Scale(0.075f, 0.05f, 0.05f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2);
+
+        }
+         if (g_aPressed && seconds_togo > 0 && fishlives > 0 && !endGame)
          {
              model *= Matrix_Rotate_X(M_PI_2 / 8) * Matrix_Rotate_Z(M_PI_2 / 16);
          }
-                  if (g_dPressed && seconds_togo > 0 && fishlives > 0)
+                  if (g_dPressed && seconds_togo > 0 && fishlives > 0 && !endGame)
          {
              model *= Matrix_Rotate_X(  - M_PI_2 / 8) * Matrix_Rotate_Z( - M_PI_2 / 16);
          }
@@ -585,7 +644,7 @@ void loadFangTooth(){
 
     int i;
 
-    for (i = 0; i < FANGTOOTH_NUM; i++)
+    for (i = 0; i < (FANGTOOTH_NUM - 1); i++)
     {
         if ( (i % 2) == 0) {
             GenericControl fang;
@@ -620,7 +679,7 @@ void animateFangtooths(float position_z, float timeDelta)
     float fangSpeed = 0.01;
 
     //
-    for (i=0; i < FANGTOOTH_NUM; i++)
+    for (i=0; i < FANGTOOTH_NUM - 1; i++)
     {
 
         if ( abs(fangtooths[i].pos_z) - abs(position_z) <= 30 && abs(fangtooths[i].pos_z) - abs(position_z) >= -5) {
@@ -1427,6 +1486,17 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     }
 
 
+    if (key == GLFW_KEY_ENTER && action == GLFW_PRESS)
+    {
+        g_enterPressed = true;
+    }
+
+    if (key == GLFW_KEY_ENTER && action == GLFW_RELEASE)
+    {
+        g_enterPressed = false;
+    }
+
+
     //if (key == GLFW_KEY_S && action == GLFW_PRESS)
     //{
     //    g_sPressed = true;
@@ -1540,25 +1610,31 @@ void ShowGameInfo(GLFWwindow* window)
 
     float pad = TextRendering_LineHeight(window);
 
-    char buffer[80];
-    snprintf(buffer, 80, "Press Enter to start! Lives remaining: (%d) Seconds Remaing: (%.2f)\n", fishlives, seconds_togo);
-
+    char buffer[120];
+    if (gameStarted) {
+        snprintf(buffer, 120, "Avoid the fangtooth and eat the food! Lives remaining: (%d) Seconds Remaing: (%0.f) Points: (%d)\n", fishlives, seconds_togo, points);
+    } else if (!endGame) {
+        snprintf(buffer, 120, "Press Enter to start! Lives remaining: (%d) Seconds Remaing: (%.2f)\n", fishlives, seconds_togo);
+    } else if (endGame)
+    {
+        snprintf(buffer, 120, "End Game :(! Points made (%d)\n", points);
+    }
     TextRendering_PrintString(window, buffer, -1.0f+pad/10, -1.0f+2*pad/10, 1.0f);
 }
 
 // Escrevemos na tela qual matriz de projeção está sendo utilizada.
 void TextRendering_ShowProjection(GLFWwindow* window)
 {
-    if ( !g_ShowInfoText )
-        return;
+    //if ( !g_ShowInfoText )
+    //    return;
 
-    float lineheight = TextRendering_LineHeight(window);
-    float charwidth = TextRendering_CharWidth(window);
+    //float lineheight = TextRendering_LineHeight(window);
+    //float charwidth = TextRendering_CharWidth(window);
 
-    if ( g_UsePerspectiveProjection )
-        TextRendering_PrintString(window, "Perspective", 1.0f-13*charwidth, -1.0f+2*lineheight/10, 1.0f);
-    else
-        TextRendering_PrintString(window, "Orthographic", 1.0f-13*charwidth, -1.0f+2*lineheight/10, 1.0f);
+    //if ( g_UsePerspectiveProjection )
+    //    TextRendering_PrintString(window, "Perspective", 1.0f-13*charwidth, -1.0f+2*lineheight/10, 1.0f);
+    //else
+    //    TextRendering_PrintString(window, "Orthographic", 1.0f-13*charwidth, -1.0f+2*lineheight/10, 1.0f);
 }
 
 // Escrevemos na tela o número de quadros renderizados por segundo (frames per
