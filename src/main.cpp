@@ -168,7 +168,7 @@ bool g_sPressed = false;
 bool g_dPressed = false;
 bool g_aPressed = false;
 
-#define FANGTOOTH_NUM 10
+#define FANGTOOTH_NUM 20
 #define FISHFOOD_NUM 50
 #define COW_NUM 3
 
@@ -448,7 +448,10 @@ void RenderGame(float dtime, GLFWwindow* window)
             }
         }
 
-
+        if (abs(camera_position_c.z) >= (oceanSizeZ - 2) )
+        {
+            camera_position_c.z = - oceanSizeZ + 2;
+        }
         if (camera_position_c.y < -0.1)
         {
             camera_position_c.y = -0.1;
@@ -511,7 +514,7 @@ void RenderGame(float dtime, GLFWwindow* window)
         #define M_PI_2 1.57079632679489661923
 
         model = Matrix_Translate(0.0f,0.0f,0.0f)
-              * Matrix_Scale(30.0f, -30.0f, oceanSizeZ)
+              * Matrix_Scale(30.0f, -30.0f, oceanSizeZ + 15)
               * Matrix_Rotate_Z(0.6f)
               * Matrix_Rotate_X(0.2f)
               * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
