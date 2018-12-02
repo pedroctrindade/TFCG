@@ -82,7 +82,6 @@ void PushMatrix(glm::mat4 M);
 void PopMatrix(glm::mat4& M);
 
 void animateFangtooths(float position_z, float timeDelta);
-void drawFishFood(float pos_z, float timD);
 void animateGame(float dtime);
 void RenderGame(float dtime, GLFWwindow* window);
 void resetGame();
@@ -129,8 +128,6 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
 void loadFangTooth();
-void loadFishFood();
-
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
 struct SceneObject
@@ -177,7 +174,10 @@ bool g_enterPressed = false;
 #define COW_NUM 3
 
 #define MULTIPLY_FACTOR 300
-
+// Peixe tem 0.6 de tamanho em Z e em X
+#define FISH_HIT_CUBE 0.3
+// Fangtooth tem 0.5 em Z e em X
+#define FANGTOOTH_HIT_CUBE 0.25
 int fishlives = 3;
 // Define o tipo de câmera
 bool g_isFreeCamera = false;
@@ -210,8 +210,9 @@ float g_TorsoPositionY = 0.0f;
 float seconds_togo = 30.0f;
 int points = 0;
 GenericControl fangtooths [FANGTOOTH_NUM];
-GenericControl fishfoods[FISHFOOD_NUM];
 GenericControl cam;
+GenericControl fish;
+
 
 float oceanSizeZ = 150.0f;
 // Variável que controla o tipo de projeção utilizada: perspectiva ou ortográfica.
@@ -227,7 +228,6 @@ bool keyPressedY = false;
 bool endGame = false;
 
 float interval = oceanSizeZ / FANGTOOTH_NUM;
-float interval2 = oceanSizeZ / FISHFOOD_NUM;
 
 
 // Variáveis que definem um programa de GPU (shaders). Veja função LoadShadersFromFiles().
@@ -322,7 +322,6 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/fundo.jpg"); // TextureImage1
     LoadTextureImage("../../data/areia.jpg"); // TextureImage2
     LoadTextureImage("../../data/fangtooth.jpg"); // TextureImage3
-	LoadTextureImage("../../data/fishfood.jpg"); // TextureImage4
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel planemodel("../../data/plane.obj");
@@ -345,13 +344,9 @@ int main(int argc, char* argv[])
     ComputeNormals(&fangtoothmodel);
     BuildTrianglesAndAddToVirtualScene(&fangtoothmodel);
 
-
-    ObjModel fishfoodmodel("../../data/fishfood.obj");
-    ComputeNormals(&fishfoodmodel);
-    BuildTrianglesAndAddToVirtualScene(&fishfoodmodel);
-
     loadFangTooth();
-	loadFishFood();
+    fish.scale_x = FISH_HIT_CUBE;
+    fish.scale_z = FISH_HIT_CUBE;
 
     if ( argc > 1 )
     {
@@ -427,7 +422,7 @@ int main(int argc, char* argv[])
 
 bool CheckCubeCollision(GenericControl object_1, GenericControl object_2)
 {
-
+    printf("x: %f z: %f \n", object_1.pos_x, object_1.pos_z );
     float obj1FirstX =  object_1.pos_x - object_1.scale_x;
     float obj1LastX = object_1.pos_x + object_1.scale_x;
 
@@ -566,6 +561,10 @@ void RenderGame(float dtime, GLFWwindow* window)
         cam.pos_y = camera_position_c.y;
         cam.pos_z = camera_position_c.z;
 
+        fish.pos_x = camera_position_c.x;
+        fish.pos_y = camera_position_c.y - 1.5;
+        fish.pos_z = camera_position_c.z - 2;
+
         glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
 
         glm::mat4 projection;
@@ -598,7 +597,6 @@ void RenderGame(float dtime, GLFWwindow* window)
         #define FISH  2
         #define SPHERE 3
         #define FANGTOOTH 4
-		#define FISHFOOD 5
         #define M_PI   3.14159265358979323846
         #define M_PI_2 1.57079632679489661923
 
@@ -611,9 +609,7 @@ void RenderGame(float dtime, GLFWwindow* window)
         glUniform1i(object_id_uniform, SPHERE);
         DrawVirtualObject("sphere");
 
-        drawFishFood(camera_position_c.z - 2, dtime);
-
-		animateFangtooths(camera_position_c.z - 2, dtime);
+        animateFangtooths(camera_position_c.z - 2, dtime);
 
         if (!gameStarted){
               model =  Matrix_Translate(0.0f, -0.5f, 1.0f) *
@@ -657,55 +653,27 @@ void RenderGame(float dtime, GLFWwindow* window)
 }
 
 void loadFishFood() {
-interval2 = oceanSizeZ / FISHFOOD_NUM;
-	int i;
+    //interval = oceanSizeZ / FISHFOOD_NUM;
+//    int i;
 
-    srand (time(NULL));
+    //srand (time(NULL));
 
-    for (i = 0; i < FISHFOOD_NUM; i++)
-    {
-        int random_n = rand() % 3;
+  //  int random_n = rand() % 40 + 1;
+   // for (i = 0; i < FISHFOOD_NUM; i++)
+    //{
+    /*        GenericControl food;
+            food.obj_name = "Sphere";
+            food.obj_id = SPHERE;
+            fang.pos_x = boundx;
+            fang.pos_y = -1;
+            fang.pos_z = - (interval) * ( i + 1);
+            fang.direction = 4;
+            fangtooths[i] = fang;
 
-        if((i%2) == 0 ){
-			GenericControl food;
-            food.obj_name = "fishfood";
-            food.obj_id = FISHFOOD;
-            food.pos_x = random_n;
-            food.pos_y = -1;
-            food.pos_z = - (interval2) * ( i + 1);
-            food.direction = 3;
-            fishfoods[i] = food;
-            }
-        else{
-			GenericControl food;
-            food.obj_name = "fishfood";
-            food.obj_id = FISHFOOD;
-            food.pos_x = -random_n;
-            food.pos_y = -1;
-            food.pos_z = - (interval2) * ( i + 1);
-            food.direction = 3;
-            fishfoods[i] = food;
 
-        }
-    }
+    }*/
 
 }
-void drawFishFood(float pos_z, float timDelta)
-{
-    int i;
-    glm::mat4 model = Matrix_Identity();
-
-   for(i=0;i<FISHFOOD_NUM;i++)
-    {
-        model = Matrix_Translate(fishfoods[i].pos_x,fishfoods[i].pos_y,fishfoods[i].pos_z) * Matrix_Scale(0.125f, 0.125f, 0.125f) *
-        Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_X(- M_PI_2) * Matrix_Rotate_Y(g_AngleY + (float)glfwGetTime() * 0.1f);
-
-        glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(object_id_uniform,FISHFOOD);
-       DrawVirtualObject("fishfood");
-    }
-}
-
 
 void loadFangTooth(){
 
@@ -720,8 +688,8 @@ void loadFangTooth(){
             fang.pos_x = boundx;
             fang.pos_y = -1;
             fang.pos_z = - (interval) * ( i + 1);
-            fang.scale_x  = 0.125f;
-            fang.scale_z = 0.125f;
+            fang.scale_x  = FANGTOOTH_HIT_CUBE;
+            fang.scale_z = FANGTOOTH_HIT_CUBE;
             fang.direction = 4;
             fangtooths[i] = fang;
 
@@ -733,8 +701,8 @@ void loadFangTooth(){
             fang.pos_x = - boundx;
             fang.pos_y = -1;
             fang.pos_z = - (interval) * ( i + 1);
-            fang.scale_x  = 0.125f;
-            fang.scale_z = 0.125f;
+            fang.scale_x  = FANGTOOTH_HIT_CUBE;
+            fang.scale_z = FANGTOOTH_HIT_CUBE;
             fang.direction = 3;
             fangtooths[i] = fang;
         }
@@ -790,7 +758,7 @@ void animateFangtooths(float position_z, float timeDelta)
                 fangtooths[i].pos_x += fangSpeed * timeDelta * ( MULTIPLY_FACTOR + 50);
             }
 
-            if (CheckCubeCollision(fangtooths[i], cam) ) {
+            if (CheckCubeCollision(fangtooths[i], fish) ) {
                 //cam.pos_z -= 2;
                 //fishlives--;
                 printf("ai");
@@ -947,7 +915,6 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(program_id, "TextureImage1"), 1);
     glUniform1i(glGetUniformLocation(program_id, "TextureImage2"), 2);
     glUniform1i(glGetUniformLocation(program_id, "TextureImage3"), 3);
-    glUniform1i(glGetUniformLocation(program_id, "TextureImage4"), 4);
     glUseProgram(0);
 }
 
