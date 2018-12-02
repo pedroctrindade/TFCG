@@ -113,7 +113,7 @@ void TextRendering_PrintMatrixVectorProductDivW(GLFWwindow* window, glm::mat4 M,
 // Funções abaixo renderizam como texto na janela OpenGL algumas matrizes e
 // outras informações do programa. Definidas após main().
 void TextRendering_ShowModelViewProjection(GLFWwindow* window, glm::mat4 projection, glm::mat4 view, glm::mat4 model, glm::vec4 p_model);
-void TextRendering_ShowEulerAngles(GLFWwindow* window);
+void ShowGameInfo(GLFWwindow* window);
 void TextRendering_ShowProjection(GLFWwindow* window);
 void TextRendering_ShowFramesPerSecond(GLFWwindow* window);
 
@@ -201,6 +201,8 @@ float g_ForearmAngleX = 0.0f;
 // Variáveis que controlam translação do torso
 float g_TorsoPositionX = 0.0f;
 float g_TorsoPositionY = 0.0f;
+
+float seconds_togo = 30.0f;
 
 GenericControl fangtooths [FANGTOOTH_NUM];
 GenericControl cam;
@@ -361,14 +363,24 @@ int main(int argc, char* argv[])
 //    glm::vec4 camera_position_c  = glm::vec4(x,y,z,1.0f); // Ponto "c", centro da câmera
 
     float previous_time = (float) glfwGetTime();
-
+    float totalTime = 0.0f;
     // Ficamos em loop, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
     {
         float dtime = (float)glfwGetTime() - previous_time;
         previous_time = (float) glfwGetTime();
 
+        totalTime += dtime;
+
         RenderGame(dtime, window);
+
+        if (seconds_togo > 0 ){
+            if (totalTime >= 1.0)
+            {
+                seconds_togo -= 1;
+                totalTime =0;
+            }
+        }
 
         glfwPollEvents();
     }
@@ -407,32 +419,35 @@ void RenderGame(float dtime, GLFWwindow* window)
         glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
         glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
         glm::vec4 free_camera = glm::vec4(-x,-y,-z,0.0f);
+        if (fishlives > 0 && seconds_togo >0 )
+        {
+            if (g_wPressed) {
+                camera_position_c.z +=  movement * free_camera.z;
+                camera_position_c.x +=  movement * free_camera.x;
+                adjusted = true;
+            }
 
-        if (g_wPressed) {
-            camera_position_c.z +=  movement * free_camera.z;
-            camera_position_c.x +=  movement * free_camera.x;
-            adjusted = true;
+            if (g_sPressed) {
+                camera_position_c.z -= movement * free_camera.z;
+                camera_position_c.x -=  movement * free_camera.x;
+                adjusted = true;
+            }
+
+            if (g_dPressed) {
+                glm::vec4 matriz_rotacao = Matrix_Rotate_Y(3.14159 / 2) * free_camera;
+                camera_position_c.x -= movement * matriz_rotacao.x ;
+                camera_position_c.z -= movement * matriz_rotacao.z ;
+                adjusted = true;
+            }
+
+            if (g_aPressed) {
+                glm::vec4 matriz_rotacao = Matrix_Rotate_Y(3.14159 / 2) * free_camera;
+                camera_position_c.x +=  movement * matriz_rotacao.x ;
+                camera_position_c.z += movement * matriz_rotacao.z ;
+                adjusted = true;
+            }
         }
 
-        if (g_sPressed) {
-            camera_position_c.z -= movement * free_camera.z;
-            camera_position_c.x -=  movement * free_camera.x;
-            adjusted = true;
-        }
-
-        if (g_dPressed) {
-            glm::vec4 matriz_rotacao = Matrix_Rotate_Y(3.14159 / 2) * free_camera;
-            camera_position_c.x -= movement * matriz_rotacao.x ;
-            camera_position_c.z -= movement * matriz_rotacao.z ;
-            adjusted = true;
-        }
-
-        if (g_aPressed) {
-            glm::vec4 matriz_rotacao = Matrix_Rotate_Y(3.14159 / 2) * free_camera;
-            camera_position_c.x +=  movement * matriz_rotacao.x ;
-            camera_position_c.z += movement * matriz_rotacao.z ;
-            adjusted = true;
-        }
 
         if (camera_position_c.y < -0.1)
         {
@@ -508,11 +523,11 @@ void RenderGame(float dtime, GLFWwindow* window)
 
         model =  Matrix_Translate(camera_position_c.x, camera_position_c.y - 1.5, camera_position_c.z - 2) *
          Matrix_Scale(0.075f, 0.05f, 0.05f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2);
-         if (g_aPressed)
+         if (g_aPressed && seconds_togo > 0 && fishlives > 0)
          {
              model *= Matrix_Rotate_X(M_PI_2 / 8) * Matrix_Rotate_Z(M_PI_2 / 16);
          }
-                  if (g_dPressed)
+                  if (g_dPressed && seconds_togo > 0 && fishlives > 0)
          {
              model *= Matrix_Rotate_X(  - M_PI_2 / 8) * Matrix_Rotate_Z( - M_PI_2 / 16);
          }
@@ -531,7 +546,7 @@ void RenderGame(float dtime, GLFWwindow* window)
         DrawVirtualObject("plane");
 
 
-        TextRendering_ShowEulerAngles(window);
+        ShowGameInfo(window);
 
         TextRendering_ShowProjection(window);
 
@@ -601,7 +616,7 @@ void animateFangtooths(float position_z, float timeDelta)
     glm::mat4 model = Matrix_Identity();
     float fangSpeed = 0.01;
 
-
+    //
     for (i=0; i < FANGTOOTH_NUM; i++)
     {
 
@@ -620,8 +635,6 @@ void animateFangtooths(float position_z, float timeDelta)
                      Matrix_Scale(0.125f, 0.125f, 0.125f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2) * Matrix_Rotate_Z(M_PI);
 
             }
-
-
 
             if ( fangtooths[i].pos_x <  - boundx)
             {
@@ -643,6 +656,7 @@ void animateFangtooths(float position_z, float timeDelta)
             else if (fangtooths[i].direction == 3 ) {
                 fangtooths[i].pos_x += fangSpeed * timeDelta * ( MULTIPLY_FACTOR + 50);
             }
+
 
 
             glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
@@ -1516,7 +1530,7 @@ void TextRendering_ShowModelViewProjection(
 
 // Escrevemos na tela os ângulos de Euler definidos nas variáveis globais
 // g_AngleX, g_AngleY, e g_AngleZ.
-void TextRendering_ShowEulerAngles(GLFWwindow* window)
+void ShowGameInfo(GLFWwindow* window)
 {
     if ( !g_ShowInfoText )
         return;
@@ -1524,7 +1538,7 @@ void TextRendering_ShowEulerAngles(GLFWwindow* window)
     float pad = TextRendering_LineHeight(window);
 
     char buffer[80];
-    snprintf(buffer, 80, "Euler Angles rotation matrix = Z(%.2f)*Y(%.2f)*X(%.2f)\n", g_AngleZ, g_AngleY, g_AngleX);
+    snprintf(buffer, 80, "Press Enter to start! Lives remaining: (%d) Seconds Remaing: (%.2f)\n", fishlives, seconds_togo);
 
     TextRendering_PrintString(window, buffer, -1.0f+pad/10, -1.0f+2*pad/10, 1.0f);
 }
