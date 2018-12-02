@@ -177,7 +177,10 @@ bool g_enterPressed = false;
 #define COW_NUM 3
 
 #define MULTIPLY_FACTOR 300
-
+// Peixe tem 0.6 de tamanho em Z e em X
+#define FISH_HIT_CUBE 0.3
+// Fangtooth tem 0.5 em Z e em X
+#define FANGTOOTH_HIT_CUBE 0.25
 int fishlives = 3;
 // Define o tipo de câmera
 bool g_isFreeCamera = false;
@@ -212,7 +215,7 @@ int points = 0;
 GenericControl fangtooths [FANGTOOTH_NUM];
 GenericControl fishfoods[FISHFOOD_NUM];
 GenericControl cam;
-
+GenericControl fish;
 float oceanSizeZ = 150.0f;
 // Variável que controla o tipo de projeção utilizada: perspectiva ou ortográfica.
 bool g_UsePerspectiveProjection = true;
@@ -350,6 +353,9 @@ int main(int argc, char* argv[])
     ComputeNormals(&fishfoodmodel);
     BuildTrianglesAndAddToVirtualScene(&fishfoodmodel);
 
+    fish.scale_x = FISH_HIT_CUBE;
+    fish.scale_z = FISH_HIT_CUBE;
+
     loadFangTooth();
 	loadFishFood();
 
@@ -431,18 +437,22 @@ bool CheckCubeCollision(GenericControl object_1, GenericControl object_2)
     float obj1FirstX =  object_1.pos_x - object_1.scale_x;
     float obj1LastX = object_1.pos_x + object_1.scale_x;
 
-    float obj1FirstZ = object_1.pos_z - object_1.scale_z;
-    float obj1LastZ = abs(object_1.pos_z) + abs(object_1.scale_z);
+    float obj1FirstZ = object_1.pos_z + object_1.scale_z;
+    float obj1LastZ = object_1.pos_z - object_1.scale_z;
 
     float obj2FirstX =  object_2.pos_x - object_2.scale_x;
     float obj2LastX = object_2.pos_x + object_2.scale_x;
 
-    float obj2FirstZ = abs(object_2.pos_z) - abs(object_2.scale_z);
-    float obj2LastZ = object_2.pos_z + object_2.scale_z;
+    float obj2FirstZ = object_2.pos_z + object_2.scale_z;
+    float obj2LastZ = object_2.pos_z - object_2.scale_z;
 
-    if (obj1LastZ <= obj2LastZ && obj1FirstZ >= obj2FirstZ)
+    //printf("obj1 fx:%f fz:%f obj2 fx:%f fz:%f\n", obj1FirstX, obj1FirstZ, obj2FirstX, obj2FirstZ);
+    //printf("obj1 lx:%f lz:%f obj2 lx:%f lz:%f\n", obj1LastX, obj1LastZ, obj2LastX, obj2LastZ);
+    if (obj1LastZ >= obj2LastZ && obj2FirstZ >= obj1FirstZ)
     {
-        if (obj1FirstX >= obj2FirstX && obj1LastX >= obj2LastX)
+        //printf("aiai\n");
+        if (obj1FirstX >= obj2FirstX && obj1LastX <= obj2LastX )
+            printf("colidiu :(\n");
             return true;
     }
     return false;
@@ -565,6 +575,10 @@ void RenderGame(float dtime, GLFWwindow* window)
         cam.pos_x = camera_position_c.x;
         cam.pos_y = camera_position_c.y;
         cam.pos_z = camera_position_c.z;
+
+        fish.pos_x = camera_position_c.x;
+        fish.pos_y = camera_position_c.y - 1.5;
+        fish.pos_z = camera_position_c.z  - 2;
 
         glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
 
@@ -720,8 +734,8 @@ void loadFangTooth(){
             fang.pos_x = boundx;
             fang.pos_y = -1;
             fang.pos_z = - (interval) * ( i + 1);
-            fang.scale_x  = 0.125f;
-            fang.scale_z = 0.125f;
+            fang.scale_x  = FANGTOOTH_HIT_CUBE;
+            fang.scale_z = FANGTOOTH_HIT_CUBE;
             fang.direction = 4;
             fangtooths[i] = fang;
 
@@ -733,8 +747,8 @@ void loadFangTooth(){
             fang.pos_x = - boundx;
             fang.pos_y = -1;
             fang.pos_z = - (interval) * ( i + 1);
-            fang.scale_x  = 0.125f;
-            fang.scale_z = 0.125f;
+            fang.scale_x  = FANGTOOTH_HIT_CUBE;
+            fang.scale_z = FANGTOOTH_HIT_CUBE;
             fang.direction = 3;
             fangtooths[i] = fang;
         }
@@ -790,10 +804,10 @@ void animateFangtooths(float position_z, float timeDelta)
                 fangtooths[i].pos_x += fangSpeed * timeDelta * ( MULTIPLY_FACTOR + 50);
             }
 
-            if (CheckCubeCollision(fangtooths[i], cam) ) {
-                //cam.pos_z -= 2;
-                //fishlives--;
-                printf("ai");
+            if (CheckCubeCollision(fangtooths[i], fish) ) {
+                cam.pos_z -= 2;
+                fishlives--;
+                //printf("ai");
             }
 
             glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
