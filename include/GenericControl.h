@@ -21,6 +21,10 @@ class GenericControl
 
         std::string obj_name;
         int obj_id;
+
+        float scale_x;
+        float scale_y;
+        float scale_z;
 };
 
 #endif // GENERICCONTROL_H

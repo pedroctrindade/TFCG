@@ -1,0 +1,36 @@
+===== Little Chick Fish =====
+
+1 - Na tela inicial há um tipo de câmera look-at centrada ao redor do peixe, pode-se movimentá-la com o mouse.
+
+2 - Para sair dessa câmera e começar a jogar aperte enter.
+
+3 - Com a tecla W movimenta-se para a frente, A e D para os lados. Infelizmente o peixe não sabe nadar para trás!
+
+4 - Desvie-se dos peixe-feio e tente coletar toda comida no caminho (esferas amarelas). 
+
+5 - Seu peixe tem 3 vidas, cada vez que um peixe feio colide com ele, você perde uma vida.
+
+6 - O objetivo é coletar o máximo da comida que conseguir antes de terminar  o tempo de 30 segundos, evitando chegar a 0 vidas.
+
+7 - Assim que acabar o tempo ou a quantidade de vidas, pode-se apertar enter novamente para recomeçar. 
+
+
+Bom jogo!
+
+
+         ^
+       //                        ___   ___
+     (*)     "O"                /  _   _  \
+    (*)                           / \ / \
+   (*)    "O"                    |   |   |    |\
+  //                             |O  |O  |___/  \     ++
+ //                               \_/ \_/    \   | ++
+//                              _/      __    \  \
+/     /|   /\                  (________/ __   |_/
+     / |  |  |                   (___      /   |    |\
+    / /  /   |                     \     \|    |___/  |
+   |  | |   /                       \_________      _/   ++++
+  /   | |  |                      ++           \    |
+ |   / /   |                              ++   |   /  +++
+/   /  |   |                               ++ /__/
+~~~ ~~~~   ~~~~~~~~~~~~  ~~~~~~~~~~~~~  ~~~~        ~~+++~~~~ ~

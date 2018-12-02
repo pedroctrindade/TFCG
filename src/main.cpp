@@ -98,7 +98,7 @@ void LoadShader(const char* filename, GLuint shader_id); // Função utilizada p
 GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id); // Cria um programa de GPU
 void PrintObjModelInfo(ObjModel*); // Função para debugging
 
-
+bool CheckCubeCollision(GenericControl object_1, GenericControl object_2);
 
 // Declaração de funções auxiliares para renderizar texto dentro da janela
 // OpenGL. Estas funções estão definidas no arquivo "textrendering.cpp".
@@ -220,7 +220,7 @@ bool keyPressedX = false;
 
 bool keyPressedY = false;
 
-bool endGame = true;
+bool endGame = false;
 
 float interval = oceanSizeZ / FANGTOOTH_NUM;
 
@@ -396,7 +396,7 @@ int main(int argc, char* argv[])
             }
         }
 
-        if(g_enterPressed && endGame)
+        if(g_enterPressed && (endGame || !gameStarted) )
         {
             resetGame();
             g_enterPressed = false;
@@ -413,6 +413,28 @@ int main(int argc, char* argv[])
     return 0;
 }
 
+bool CheckCubeCollision(GenericControl object_1, GenericControl object_2)
+{
+
+    float obj1FirstX =  object_1.pos_x - object_1.scale_x;
+    float obj1LastX = object_1.pos_x + object_1.scale_x;
+
+    float obj1FirstZ = object_1.pos_z - object_1.scale_z;
+    float obj1LastZ = abs(object_1.pos_z) + abs(object_1.scale_z);
+
+    float obj2FirstX =  object_2.pos_x - object_2.scale_x;
+    float obj2LastX = object_2.pos_x + object_2.scale_x;
+
+    float obj2FirstZ = abs(object_2.pos_z) - abs(object_2.scale_z);
+    float obj2LastZ = object_2.pos_z + object_2.scale_z;
+
+    if (obj1LastZ <= obj2LastZ && obj1FirstZ >= obj2FirstZ)
+    {
+        if (obj1FirstX >= obj2FirstX && obj1LastX >= obj2LastX)
+            return true;
+    }
+    return false;
+}
 
 void resetGame()
 {
@@ -430,6 +452,8 @@ void resetGame()
     cam.pos_x = x;
     cam.pos_y = y;
     cam.pos_z = z;
+    cam.scale_z = 0.125;
+    cam.scale_x = 0.125;
 
     fishlives = 3;
     seconds_togo = 30.0f;
@@ -468,7 +492,7 @@ void RenderGame(float dtime, GLFWwindow* window)
         // para camera free
         glm::vec4 free_camera = glm::vec4(-x,-y,-z,0.0f);
 
-        if (gameStarted || endGame) {
+        if (gameStarted && !endGame) {
 
             if (fishlives > 0 && seconds_togo >0 && !endGame)
             {
@@ -585,11 +609,11 @@ void RenderGame(float dtime, GLFWwindow* window)
          Matrix_Scale(0.075f, 0.05f, 0.05f) * Matrix_Rotate_Z(M_PI + M_PI_2) * Matrix_Rotate_Y( - M_PI_2);
 
         }
-         if (g_aPressed && seconds_togo > 0 && fishlives > 0 && !endGame)
+         if (g_aPressed && seconds_togo > 0 && fishlives > 0 && !endGame && gameStarted)
          {
              model *= Matrix_Rotate_X(M_PI_2 / 8) * Matrix_Rotate_Z(M_PI_2 / 16);
          }
-                  if (g_dPressed && seconds_togo > 0 && fishlives > 0 && !endGame)
+                  if (g_dPressed && seconds_togo > 0 && fishlives > 0 && !endGame && gameStarted)
          {
              model *= Matrix_Rotate_X(  - M_PI_2 / 8) * Matrix_Rotate_Z( - M_PI_2 / 16);
          }
@@ -653,6 +677,8 @@ void loadFangTooth(){
             fang.pos_x = boundx;
             fang.pos_y = -1;
             fang.pos_z = - (interval) * ( i + 1);
+            fang.scale_x  = 0.125f;
+            fang.scale_z = 0.125f;
             fang.direction = 4;
             fangtooths[i] = fang;
 
@@ -664,6 +690,8 @@ void loadFangTooth(){
             fang.pos_x = - boundx;
             fang.pos_y = -1;
             fang.pos_z = - (interval) * ( i + 1);
+            fang.scale_x  = 0.125f;
+            fang.scale_z = 0.125f;
             fang.direction = 3;
             fangtooths[i] = fang;
         }
@@ -719,7 +747,11 @@ void animateFangtooths(float position_z, float timeDelta)
                 fangtooths[i].pos_x += fangSpeed * timeDelta * ( MULTIPLY_FACTOR + 50);
             }
 
-
+            if (CheckCubeCollision(fangtooths[i], cam) ) {
+                //cam.pos_z -= 2;
+                //fishlives--;
+                printf("ai");
+            }
 
             glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
             glUniform1i(object_id_uniform, FANGTOOTH);
@@ -1613,11 +1645,12 @@ void ShowGameInfo(GLFWwindow* window)
     char buffer[120];
     if (gameStarted) {
         snprintf(buffer, 120, "Avoid the fangtooth and eat the food! Lives remaining: (%d) Seconds Remaing: (%0.f) Points: (%d)\n", fishlives, seconds_togo, points);
-    } else if (!endGame) {
-        snprintf(buffer, 120, "Press Enter to start! Lives remaining: (%d) Seconds Remaing: (%.2f)\n", fishlives, seconds_togo);
-    } else if (endGame)
+    }
+    else if (endGame)
     {
-        snprintf(buffer, 120, "End Game :(! Points made (%d)\n", points);
+        snprintf(buffer, 120, "End Game :(! Points made (%d) Press Enter to Restart! \n", points);
+    } else  if (!gameStarted) {
+        snprintf(buffer, 120, "Press Enter to start! Lives remaining: (%d) Seconds Remaing: (%.2f)\n", fishlives, seconds_togo);
     }
     TextRendering_PrintString(window, buffer, -1.0f+pad/10, -1.0f+2*pad/10, 1.0f);
 }
